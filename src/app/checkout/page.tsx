@@ -44,7 +44,7 @@ export default function CheckoutPage() {
       prequalSubmission?.email ?? paymentContact?.email ?? offer.shopperEmail ?? ''
     ).trim();
 
-    const purchase: Omit<OfferPurchase, 'id' | 'purchasedAt'> & { purchasedAt: ReturnType<typeof serverTimestamp> } = {
+    const purchasePayload: Omit<OfferPurchase, 'id' | 'purchasedAt'> = {
       dealerId: offer.dealerId,
       offerId: offer.id,
       vehicleModelName: offer.vehicleModelName,
@@ -71,10 +71,31 @@ export default function CheckoutPage() {
             timeSlot: appointment.timeSlot,
           }
         : null,
-      purchasedAt: serverTimestamp(),
     };
 
-    await addDoc(collection(firestore, 'offerPurchases'), purchase);
+    await addDoc(collection(firestore, 'offerPurchases'), {
+      ...purchasePayload,
+      purchasedAt: serverTimestamp(),
+    });
+
+    if (customerEmail) {
+      try {
+        const response = await fetch('/api/purchases/confirm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(purchasePayload),
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({}));
+          throw new Error(body.error ?? 'Unknown error sending confirmation email');
+        }
+      } catch (error) {
+        console.error('Failed to send purchase confirmation email', error);
+      }
+    }
   };
 
   const handleCompletePurchase = () => {
