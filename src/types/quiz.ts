@@ -6,6 +6,7 @@ const VehicleSchema = z.object({
     seating_capacity: z.number(),
     available_powertrains: z.array(z.string()),
     features: z.array(z.string()),
+    url: z.string(),
 });
 
 export const SuggestModelsFromQuizInputSchema = z.object({
