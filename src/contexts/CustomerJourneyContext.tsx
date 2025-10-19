@@ -15,6 +15,7 @@ import type {
   JourneyPreferences,
   TimelineEvent,
 } from '@/lib/journey-store';
+import { sealTransportPayload } from '@/lib/secure-transport';
 
 interface DealerSummary {
   id: string;
@@ -136,10 +137,14 @@ export function CustomerJourneyProvider({ children }: { children: ReactNode }) {
     async (payload: SubmitPayload) => {
       setIsSubmitting(true);
       try {
+        const envelope = await sealTransportPayload(payload);
         const response = await fetch('/api/prequalifications', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Transport-Encrypted': 'AES-256-GCM',
+          },
+          body: JSON.stringify({ envelope }),
         });
 
         if (!response.ok) {

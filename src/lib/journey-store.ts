@@ -172,7 +172,7 @@ type JourneyStore = Map<string, PrequalificationRecord>;
 
 declare global {
   // eslint-disable-next-line no-var
-  var __JOURNEY_STORE__?: JourneyStore;
+  var __JOURNEY_STORE__: JourneyStore | undefined;
 }
 
 function getJourneyStore(): JourneyStore {

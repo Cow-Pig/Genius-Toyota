@@ -2,13 +2,38 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createLinkToken } from '@/lib/plaid';
 import { getPrequalification, getCustomerProfile } from '@/lib/journey-store';
+import {
+  isTransportEnvelope,
+  openTransportPayload,
+  type TransportEnvelope,
+} from '@/lib/secure-transport';
 
 const requestSchema = z.object({
   prequalRequestId: z.string().optional(),
 });
 
 export async function POST(request: Request) {
-  const body = await request.json();
+  let body: unknown = {};
+  try {
+    body = await request.json();
+  } catch (error) {
+    // allow empty bodies to default to guest mode
+  }
+
+  if (
+    body &&
+    typeof body === 'object' &&
+    'envelope' in body &&
+    isTransportEnvelope((body as { envelope: unknown }).envelope)
+  ) {
+    try {
+      body = await openTransportPayload((body as { envelope: TransportEnvelope }).envelope);
+    } catch (error) {
+      console.error('Transport payload decrypt failed', error);
+      return NextResponse.json({ error: 'Unable to decrypt payload' }, { status: 400 });
+    }
+  }
+
   const parsed = requestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(

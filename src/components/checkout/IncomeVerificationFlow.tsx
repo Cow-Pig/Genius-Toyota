@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { useMockDataProvider } from '@/lib/mock-data-provider';
 import { useCustomerJourney } from '@/contexts/CustomerJourneyContext';
 import type { PlaidSummaryClient } from '@/contexts/CustomerJourneyContext';
+import { sealTransportPayload } from '@/lib/secure-transport';
 import type {
   MockBankLinkResult,
   MockPlaidExchangeMetadata,
@@ -144,14 +145,18 @@ export function IncomeVerificationFlow() {
     const loadLinkToken = async () => {
       setIsLoadingLinkToken(true);
       try {
+        const envelope = await sealTransportPayload(
+          journeyState.prequalRequestId
+            ? { prequalRequestId: journeyState.prequalRequestId }
+            : {},
+        );
         const response = await fetch('/api/plaid/link_token/create', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(
-            journeyState.prequalRequestId
-              ? { prequalRequestId: journeyState.prequalRequestId }
-              : {},
-          ),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Transport-Encrypted': 'AES-256-GCM',
+          },
+          body: JSON.stringify({ envelope }),
         });
 
         if (!response.ok) {
@@ -359,16 +364,20 @@ export function IncomeVerificationFlow() {
             throw new Error('Pre-qualification ID missing for Plaid exchange.');
           }
 
+          const envelope = await sealTransportPayload({
+            prequalRequestId: journeyState.prequalRequestId,
+            publicToken,
+            institution: institutionName
+              ? { name: institutionName, institution_id: institutionId }
+              : undefined,
+          });
           const response = await fetch('/api/plaid/item/public_token/exchange', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              prequalRequestId: journeyState.prequalRequestId,
-              publicToken,
-              institution: institutionName
-                ? { name: institutionName, institution_id: institutionId }
-                : undefined,
-            }),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Transport-Encrypted': 'AES-256-GCM',
+            },
+            body: JSON.stringify({ envelope }),
           });
 
           if (!response.ok) {
