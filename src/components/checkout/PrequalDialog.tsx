@@ -89,17 +89,22 @@ export function PrequalDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>Get prequalified</DialogTitle>
-          <DialogDescription>
-            Provide a few details so we can tee up a personalized credit pre-qualification. This will initiate a soft pull only.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form className="space-y-4" onSubmit={form.handleSubmit(handleSubmit)} noValidate>
-            <ScrollArea className="max-h-[60vh] pr-4">
-              <div className="space-y-6 pb-4">
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden p-0">
+        <div className="flex h-full flex-col">
+          <DialogHeader className="space-y-2 px-6 pt-6">
+            <DialogTitle>Get prequalified</DialogTitle>
+            <DialogDescription>
+              Provide a few details so we can tee up a personalized credit pre-qualification. This will initiate a soft pull only.
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form
+              className="flex flex-1 flex-col gap-4 px-6 pb-6"
+              onSubmit={form.handleSubmit(handleSubmit)}
+              noValidate
+            >
+              <ScrollArea className="flex-1 -mr-4 pr-4">
+                <div className="space-y-6 pb-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -314,28 +319,34 @@ export function PrequalDialog({
                   )}
                 />
               </div>
-            </ScrollArea>
+              </ScrollArea>
 
-            <p className="text-xs text-muted-foreground">
-              By submitting this form you acknowledge that we will acquire your credit report for pre-qualification.
-            </p>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                By submitting this form you acknowledge that we will acquire your credit report for pre-qualification.
+              </p>
 
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Submitting…
-                  </span>
-                ) : (
-                  'Submit and run soft pull'
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="sm:min-w-[120px]"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting} className="sm:min-w-[180px]">
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Submitting…
+                    </span>
+                  ) : (
+                    'Submit and run soft pull'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </DialogContent>
     </Dialog>
   );
