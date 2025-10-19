@@ -48,19 +48,6 @@ export const ComparisonView = memo(function ComparisonView() {
   }, [activeVehicle, scenario, rates]);
 
 
-  if (!activeVehicle) {
-    return (
-      <Card className="text-center shadow-lg">
-        <CardHeader>
-          <CardTitle>Select a Vehicle</CardTitle>
-          <CardDescription>
-            Choose a model from the right to compare finance and lease options.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
   const handleSaveScenario = useCallback(
     (option: 'finance' | 'lease') => {
       const saved = saveScenarioOption(option);
@@ -79,6 +66,19 @@ export const ComparisonView = memo(function ComparisonView() {
     },
     [saveScenarioOption, toast],
   );
+
+  if (!activeVehicle) {
+    return (
+      <Card className="text-center shadow-lg">
+        <CardHeader>
+          <CardTitle>Select a Vehicle</CardTitle>
+          <CardDescription>
+            Choose a model from the right to compare finance and lease options.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
 
   return (
     <Card className="shadow-lg">
