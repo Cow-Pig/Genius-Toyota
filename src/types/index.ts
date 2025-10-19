@@ -111,11 +111,31 @@ export interface MockBankAccount {
   transactions: MockBankTransaction[];
 }
 
+export interface MockBankLinkInstitution {
+  name: string;
+  institutionId: string;
+  logoUrl?: string;
+}
+
 export interface MockBankLinkResult {
   status: VerificationStatus;
   accounts: MockBankAccount[];
   heuristics: string[];
   flaggedDeposits: string[];
+  institution?: MockBankLinkInstitution;
+  lastSyncedAt?: string;
+}
+
+export interface MockPlaidLinkToken {
+  token: string;
+  expiration: string;
+  institution: MockBankLinkInstitution;
+  supportMessage?: string;
+}
+
+export interface MockPlaidExchangeMetadata {
+  institutionId?: string | null;
+  accountIds: string[];
 }
 
 export interface MockIrsTranscript {
@@ -201,7 +221,9 @@ export type MockDataProviderFailureMode = 'none' | 'timeout' | 'error' | 'needsA
 export interface MockDataProviderConfig {
   latencyMs: number;
   failureModes: {
+    plaidLinkToken: MockDataProviderFailureMode;
     bankLink: MockDataProviderFailureMode;
+    plaidExchange: MockDataProviderFailureMode;
     irsTranscript: MockDataProviderFailureMode;
     creditReport: MockDataProviderFailureMode;
     inventory: MockDataProviderFailureMode;

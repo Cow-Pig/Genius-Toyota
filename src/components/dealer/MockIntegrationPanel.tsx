@@ -22,7 +22,9 @@ const failureOptions: { value: MockDataProviderFailureMode; label: string; helpe
 ];
 
 const services = [
-  { key: 'bankLink', label: 'Mock bank link' },
+  { key: 'plaidLinkToken', label: 'Plaid link token' },
+  { key: 'plaidExchange', label: 'Plaid exchange' },
+  { key: 'bankLink', label: 'Bank verification fallback' },
   { key: 'irsTranscript', label: 'IRS transcript' },
   { key: 'creditReport', label: 'Credit report' },
   { key: 'inventory', label: 'Inventory feed' },

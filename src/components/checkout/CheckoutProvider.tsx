@@ -1,7 +1,14 @@
 
 'use client';
 
-import { createContext, useContext, useState, useMemo, ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { FinancialOffer } from '@/types';
 import { useSearchParams } from 'next/navigation';
 
@@ -67,32 +74,54 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
   const [availableAddons] = useState<Addon[]>(mockAddons);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
 
-  const toggleAddon = (id: string) => {
-    setSelectedAddons(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+  const toggleAddon = useCallback((id: string) => {
+    setSelectedAddons((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
-  };
+  }, []);
 
   const totalAddonsPrice = useMemo(() =>
-    availableAddons.reduce((total, addon) =>
-      selectedAddons.includes(addon.id) ? total + addon.price : total, 0
-    ), [selectedAddons, availableAddons]
+    availableAddons.reduce(
+      (total, addon) =>
+        selectedAddons.includes(addon.id) ? total + addon.price : total,
+      0,
+    ),
+    [selectedAddons, availableAddons],
   );
 
-  const totalAmount = (offer?.msrp || 0) + totalAddonsPrice;
-  // This is a simplified calculation. A real app might have a more complex 'due at signing' logic.
-  const amountDueAtSigning = Math.max(0, totalAmount - tradeInValue);
+  const totalAmount = useMemo(
+    () => (offer?.msrp || 0) + totalAddonsPrice,
+    [offer?.msrp, totalAddonsPrice],
+  );
 
-  const value = {
-    offer,
-    tradeInValue,
-    availableAddons,
-    selectedAddons,
-    toggleAddon,
-    totalAddonsPrice,
-    totalAmount,
-    amountDueAtSigning,
-  };
+  // This is a simplified calculation. A real app might have a more complex 'due at signing' logic.
+  const amountDueAtSigning = useMemo(
+    () => Math.max(0, totalAmount - tradeInValue),
+    [totalAmount, tradeInValue],
+  );
+
+  const value = useMemo(
+    () => ({
+      offer,
+      tradeInValue,
+      availableAddons,
+      selectedAddons,
+      toggleAddon,
+      totalAddonsPrice,
+      totalAmount,
+      amountDueAtSigning,
+    }),
+    [
+      offer,
+      tradeInValue,
+      availableAddons,
+      selectedAddons,
+      toggleAddon,
+      totalAddonsPrice,
+      totalAmount,
+      amountDueAtSigning,
+    ],
+  );
 
   return <CheckoutContext.Provider value={value}>{children}</CheckoutContext.Provider>;
 }

@@ -67,5 +67,16 @@
   ],
   "flaggedDeposits": [
     "txn-2001"
-  ]
+  ],
+  "plaid": {
+    "linkToken": "link-sandbox-51234567-abc123",
+    "expiration": "2025-12-31T23:59:59Z",
+    "institution": {
+      "name": "Plaid Bank (Sandbox)",
+      "institutionId": "ins_109508",
+      "logoUrl": "https://cdn.plaid.com/link/icon.png"
+    },
+    "supportMessage": "Sandbox token seeded for demo pre-qualification runs."
+  },
+  "lastSyncedAt": "2024-08-12T15:05:00Z"
 }

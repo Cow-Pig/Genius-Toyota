@@ -7,6 +7,7 @@ import creditFixture from '@/data/providers/credit.json';
 import inventoryFixture from '@/data/providers/inventory.json';
 import type {
   MockBankAccount,
+  MockBankLinkInstitution,
   MockBankLinkResult,
   MockBankTransaction,
   MockIrsTranscript,
@@ -15,6 +16,8 @@ import type {
   MockInventoryVehicle,
   MockDataProviderConfig,
   MockDataProviderFailureMode,
+  MockPlaidExchangeMetadata,
+  MockPlaidLinkToken,
 } from '@/types';
 
 type BankFixture = typeof bankFixture;
@@ -30,6 +33,11 @@ type MockDataProviderContextValue = {
       | ((prev: MockDataProviderConfig) => MockDataProviderConfig),
   ) => void;
   fetchBankLink: () => Promise<MockBankLinkResult>;
+  getPlaidLinkToken: () => Promise<MockPlaidLinkToken>;
+  exchangePlaidPublicToken: (
+    publicToken: string,
+    metadata: MockPlaidExchangeMetadata,
+  ) => Promise<MockBankLinkResult>;
   fetchIrsTranscripts: () => Promise<MockIrsTranscript[]>;
   fetchCreditReport: () => Promise<MockCreditReport>;
   fetchInventory: () => Promise<MockInventoryVehicle[]>;
@@ -38,7 +46,9 @@ type MockDataProviderContextValue = {
 const defaultConfig: MockDataProviderConfig = {
   latencyMs: 400,
   failureModes: {
+    plaidLinkToken: 'none',
     bankLink: 'none',
+    plaidExchange: 'none',
     irsTranscript: 'none',
     creditReport: 'none',
     inventory: 'none',
@@ -95,6 +105,29 @@ function mergeConfig(
   };
 }
 
+function buildBankLinkResult(): MockBankLinkResult {
+  const result: MockBankLinkResult = {
+    status: 'Verified',
+    accounts: (bankFixture as BankFixture).accounts.map((account) => ({
+      ...account,
+      transactions: account.transactions.map((txn) => ({
+        ...txn,
+        type: txn.type === 'credit' ? 'credit' : 'debit',
+        employerMatch: Boolean(txn.employerMatch),
+      })) as MockBankTransaction[],
+    })) as MockBankAccount[],
+    heuristics: (bankFixture as BankFixture).heuristics,
+    flaggedDeposits: (bankFixture as BankFixture).flaggedDeposits,
+    institution: (bankFixture as BankFixture).plaid?.institution as
+      | MockBankLinkInstitution
+      | undefined,
+    lastSyncedAt:
+      (bankFixture as BankFixture).lastSyncedAt ?? new Date().toISOString(),
+  };
+
+  return result;
+}
+
 export function MockDataProviderProvider({
   children,
 }: {
@@ -115,19 +148,7 @@ export function MockDataProviderProvider({
       applyFailureMode<MockBankLinkResult>(
         config.latencyMs,
         config.failureModes.bankLink,
-        () => ({
-          status: 'Verified',
-          accounts: (bankFixture as BankFixture).accounts.map((account) => ({
-            ...account,
-            transactions: account.transactions.map((txn) => ({
-              ...txn,
-              type: txn.type === 'credit' ? 'credit' : 'debit',
-              employerMatch: Boolean(txn.employerMatch),
-            })) as MockBankTransaction[],
-          })) as MockBankAccount[],
-          heuristics: (bankFixture as BankFixture).heuristics,
-          flaggedDeposits: (bankFixture as BankFixture).flaggedDeposits,
-        }),
+        () => buildBankLinkResult(),
         (result) => ({
           ...result,
           status: 'Needs Attention',
@@ -138,6 +159,76 @@ export function MockDataProviderProvider({
         }),
         'Mock bank link',
       );
+
+    const getPlaidLinkToken = () =>
+      applyFailureMode<MockPlaidLinkToken>(
+        config.latencyMs,
+        config.failureModes.plaidLinkToken,
+        () => {
+          const plaid = (bankFixture as BankFixture).plaid;
+          const fallbackInstitution: MockBankLinkInstitution = {
+            name: 'Plaid Demo Bank',
+            institutionId: 'ins_demo_001',
+          };
+
+          return {
+            token: plaid?.linkToken ?? 'link-sandbox-demo-token',
+            expiration:
+              plaid?.expiration ??
+              new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            institution:
+              (plaid?.institution as MockBankLinkInstitution) ??
+              fallbackInstitution,
+            supportMessage: plaid?.supportMessage,
+          } satisfies MockPlaidLinkToken;
+        },
+        undefined,
+        'Plaid link token',
+      );
+
+    const exchangePlaidPublicToken = (
+      publicToken: string,
+      metadata: MockPlaidExchangeMetadata,
+    ) => {
+      if (!publicToken || !publicToken.startsWith('public-')) {
+        return Promise.reject(
+          new Error('Plaid public token rejected by mock verifier.'),
+        );
+      }
+
+      return applyFailureMode<MockBankLinkResult>(
+        config.latencyMs,
+        config.failureModes.plaidExchange,
+        () => {
+          const base = buildBankLinkResult();
+          const heuristics = metadata.accountIds.length
+            ? base.heuristics
+            : [
+                ...base.heuristics,
+                'No deposit accounts were shared via Plaid; flagging for dealer follow-up.',
+              ];
+
+          return {
+            ...base,
+            heuristics,
+            institution:
+              base.institution ??
+              ((bankFixture as BankFixture).plaid?.institution as
+                | MockBankLinkInstitution
+                | undefined),
+          } satisfies MockBankLinkResult;
+        },
+        (result) => ({
+          ...result,
+          status: 'Needs Attention',
+          heuristics: [
+            ...result.heuristics,
+            'Plaid returned an alert that requires manual verification.',
+          ],
+        }),
+        'Plaid exchange',
+      );
+    };
 
     const fetchIrsTranscripts = () =>
       applyFailureMode<MockIrsTranscript[]>(
@@ -212,6 +303,8 @@ export function MockDataProviderProvider({
       config,
       setConfig,
       fetchBankLink,
+      getPlaidLinkToken,
+      exchangePlaidPublicToken,
       fetchIrsTranscripts,
       fetchCreditReport,
       fetchInventory,

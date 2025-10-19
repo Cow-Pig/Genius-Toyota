@@ -33,7 +33,7 @@ export function OfferDetails() {
             <CardHeader>
                 <CardTitle>Your Offer</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid gap-4 sm:grid-cols-2">
                 <div>
                     <p className="font-semibold">Vehicle:</p>
                     <p>{vehicleModelName}</p>
