@@ -76,6 +76,9 @@ export function PrequalDialog({
   initialValues,
 }: PrequalDialogProps) {
   const values = useMemo(() => initialValues ?? defaultPrequalValues, [initialValues]);
+  const labelClass = 'text-[11px] font-semibold uppercase tracking-wide text-muted-foreground';
+  const inputClass = 'h-9 text-sm';
+  const sectionSpacing = 'space-y-5';
 
   const form = useForm<PrequalFormValues>({
     resolver: zodResolver(prequalSchema),
@@ -91,29 +94,29 @@ export function PrequalDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden p-0">
         <div className="flex h-full flex-col">
-          <DialogHeader className="space-y-2 px-6 pt-6">
-            <DialogTitle>Get prequalified</DialogTitle>
-            <DialogDescription>
-              Provide a few details so we can tee up a personalized credit pre-qualification. This will initiate a soft pull only.
+          <DialogHeader className="space-y-1.5 px-5 pt-5 pb-4">
+            <DialogTitle className="text-xl font-semibold">Get prequalified</DialogTitle>
+            <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+              Share a few essentials for a personalized credit preview. We&apos;ll keep it light and run a soft pull only.
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form
-              className="flex flex-1 flex-col gap-4 px-6 pb-6"
+              className="flex flex-1 flex-col gap-3 px-5 pb-5"
               onSubmit={form.handleSubmit(handleSubmit)}
               noValidate
             >
-              <ScrollArea className="flex-1 -mr-4 pr-4">
-                <div className="space-y-6 pb-4">
-                <div className="grid gap-4 md:grid-cols-2">
+              <ScrollArea className="flex-1 pr-3">
+                <div className={`${sectionSpacing} pb-3`}>
+                <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   <FormField
                     control={form.control}
                     name="firstName"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First name</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>First name</FormLabel>
                         <FormControl>
-                          <Input {...field} autoComplete="given-name" />
+                          <Input {...field} autoComplete="given-name" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -123,10 +126,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="lastName"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last name</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>Last name</FormLabel>
                         <FormControl>
-                          <Input {...field} autoComplete="family-name" />
+                          <Input {...field} autoComplete="family-name" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -136,10 +139,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="email"
                     render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Email</FormLabel>
+                      <FormItem className="md:col-span-2 lg:col-span-3 space-y-1.5">
+                        <FormLabel className={labelClass}>Email</FormLabel>
                         <FormControl>
-                          <Input {...field} type="email" autoComplete="email" />
+                          <Input {...field} type="email" autoComplete="email" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -149,10 +152,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="phone"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>Phone</FormLabel>
                         <FormControl>
-                          <Input {...field} autoComplete="tel" />
+                          <Input {...field} autoComplete="tel" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -162,10 +165,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="dob"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Date of birth</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>Date of birth</FormLabel>
                         <FormControl>
-                          <Input {...field} type="date" />
+                          <Input {...field} type="date" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -175,10 +178,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="ssnLast4"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>SSN (last 4)</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>SSN (last 4)</FormLabel>
                         <FormControl>
-                          <Input {...field} inputMode="numeric" autoComplete="off" />
+                          <Input {...field} inputMode="numeric" autoComplete="off" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -188,10 +191,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="street"
                     render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Street address</FormLabel>
+                      <FormItem className="md:col-span-2 lg:col-span-3 space-y-1.5">
+                        <FormLabel className={labelClass}>Street address</FormLabel>
                         <FormControl>
-                          <Input {...field} autoComplete="address-line1" />
+                          <Input {...field} autoComplete="address-line1" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -201,10 +204,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="city"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>City</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>City</FormLabel>
                         <FormControl>
-                          <Input {...field} autoComplete="address-level2" />
+                          <Input {...field} autoComplete="address-level2" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -214,10 +217,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="state"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>State</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>State</FormLabel>
                         <FormControl>
-                          <Input {...field} maxLength={2} autoComplete="address-level1" />
+                          <Input {...field} maxLength={2} autoComplete="address-level1" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -227,10 +230,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="zip"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ZIP</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>ZIP</FormLabel>
                         <FormControl>
-                          <Input {...field} inputMode="numeric" autoComplete="postal-code" />
+                          <Input {...field} inputMode="numeric" autoComplete="postal-code" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -240,11 +243,11 @@ export function PrequalDialog({
                     control={form.control}
                     name="employmentStatus"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Employment status</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>Employment status</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className={inputClass}>
                               <SelectValue placeholder="Select status" />
                             </SelectTrigger>
                           </FormControl>
@@ -264,10 +267,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="monthlyIncome"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly gross income</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>Monthly gross income</FormLabel>
                         <FormControl>
-                          <Input {...field} inputMode="decimal" placeholder="$7,500" />
+                          <Input {...field} inputMode="decimal" placeholder="$7,500" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -277,10 +280,10 @@ export function PrequalDialog({
                     control={form.control}
                     name="housingPayment"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Monthly housing payment</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className={labelClass}>Monthly housing payment</FormLabel>
                         <FormControl>
-                          <Input {...field} inputMode="decimal" placeholder="$2,100" />
+                          <Input {...field} inputMode="decimal" placeholder="$2,100" className={inputClass} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -290,10 +293,15 @@ export function PrequalDialog({
                     control={form.control}
                     name="notes"
                     render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Notes for the dealer (optional)</FormLabel>
+                      <FormItem className="md:col-span-2 lg:col-span-3 space-y-1.5">
+                        <FormLabel className={labelClass}>Notes for the dealer (optional)</FormLabel>
                         <FormControl>
-                          <Textarea {...field} rows={3} placeholder="Share any context about your credit or employment." />
+                          <Textarea
+                            {...field}
+                            rows={2}
+                            placeholder="Share any helpful context about your credit or employment."
+                            className="min-h-[72px] text-sm"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -305,12 +313,12 @@ export function PrequalDialog({
                   control={form.control}
                   name="consent"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="space-y-1.5">
                       <div className="flex items-start space-x-2">
                         <FormControl>
-                          <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} className="mt-0.5" />
                         </FormControl>
-                        <FormLabel className="text-sm font-normal">
+                        <FormLabel className="text-xs font-medium text-muted-foreground">
                           I authorize the dealer to obtain my credit report for pre-qualification purposes.
                         </FormLabel>
                       </div>
@@ -321,11 +329,11 @@ export function PrequalDialog({
               </div>
               </ScrollArea>
 
-              <p className="text-xs text-muted-foreground leading-relaxed">
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
                 By submitting this form you acknowledge that we will acquire your credit report for pre-qualification.
               </p>
 
-              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
+              <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:justify-end sm:gap-2">
                 <Button
                   type="button"
                   variant="outline"
