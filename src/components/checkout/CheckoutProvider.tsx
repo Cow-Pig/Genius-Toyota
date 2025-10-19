@@ -5,6 +5,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -15,13 +16,61 @@ import { useSearchParams } from 'next/navigation';
 
 // Mock data imports - in a real app, this would be fetched from an API
 import mockTradeIn from '@/data/trade-in.json';
-import mockAddons from '@/data/addons.json';
 
 interface Addon {
   id: string;
   name: string;
   description: string;
   price: number;
+}
+
+const DEFAULT_MSRP = 35000;
+const DEFAULT_TERM_MONTHS = 36;
+const DEFAULT_DUE_AT_SIGNING = 2000;
+const DEFAULT_FEES = 595;
+
+function roundToNearest(value: number, increment: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.round(value / increment) * increment;
+}
+
+function calculateAddonsFromOffer(offer: FinancialOffer | null): Addon[] {
+  const msrp = offer?.msrp ?? DEFAULT_MSRP;
+  const termMonths = offer?.termMonths ?? DEFAULT_TERM_MONTHS;
+  const incentives = offer?.incentives ?? 0;
+  const dueAtSigning = offer?.dueAtSigning ?? DEFAULT_DUE_AT_SIGNING;
+  const fees = offer?.fees ?? DEFAULT_FEES;
+
+  const financedAmount = Math.max(msrp + fees - incentives - dueAtSigning, 0);
+
+  const warrantyPrice = Math.max(roundToNearest(msrp * 0.07, 50), 500);
+  const gapPrice = Math.max(roundToNearest(financedAmount * 0.025, 25), 300);
+  const maintenancePrice = Math.max(roundToNearest((termMonths / 12) * 400, 25), 300);
+
+  return [
+    {
+      id: 'warranty',
+      name: 'Extended Vehicle Warranty',
+      description: 'Covers unexpected repairs beyond the factory warranty period.',
+      price: warrantyPrice,
+    },
+    {
+      id: 'gap',
+      name: 'GAP Insurance',
+      description:
+        "Covers the difference between your loan balance and your vehicle's value if it's totaled.",
+      price: gapPrice,
+    },
+    {
+      id: 'maintenance',
+      name: 'Pre-Paid Maintenance Plan',
+      description: 'Covers scheduled maintenance like oil changes and tire rotations.',
+      price: maintenancePrice,
+    },
+  ];
 }
 
 interface CheckoutState {
@@ -81,7 +130,6 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
 
   const [offer] = useState<FinancialOffer | null>(initialOffer);
   const [tradeInValue] = useState<number>(mockTradeIn.estimate);
-  const [availableAddons] = useState<Addon[]>(mockAddons);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [prequalSubmission, setPrequalSubmission] = useState<PrequalFormValues | null>(null);
   const [paymentContact, setPaymentContact] = useState<{ email: string; name: string } | null>(null);
@@ -90,6 +138,14 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
     date: Date | null;
     timeSlot: string | null;
   } | null>(null);
+
+  const availableAddons = useMemo(() => calculateAddonsFromOffer(offer), [offer]);
+
+  useEffect(() => {
+    setSelectedAddons((prev) =>
+      prev.filter((id) => availableAddons.some((addon) => addon.id === id)),
+    );
+  }, [availableAddons]);
 
   const toggleAddon = useCallback((id: string) => {
     setSelectedAddons((prev) =>
