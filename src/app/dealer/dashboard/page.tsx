@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, Timestamp } from 'firebase/firestore';
 import { FinancialOffer } from '@/types';
 import { format } from 'date-fns';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
@@ -88,7 +88,27 @@ function OfferActions({ offer }: { offer: FinancialOffer }) {
   }
 
 
+function isTimestampLike(value: unknown): value is { seconds: number } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'seconds' in value &&
+    typeof (value as { seconds?: unknown }).seconds === 'number'
+  );
+}
+
+function getDate(value: FinancialOffer['lastRevisedDate']) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (value instanceof Timestamp) return value.toDate();
+  if (isTimestampLike(value)) {
+    return new Date(value.seconds * 1000);
+  }
+  return null;
+}
+
 function OfferRow({ offer }: { offer: FinancialOffer }) {
+  const lastUpdated = getDate(offer.lastRevisedDate);
   return (
     <TableRow>
       <TableCell className="font-medium">{offer.vehicleModelName}</TableCell>
@@ -105,7 +125,7 @@ function OfferRow({ offer }: { offer: FinancialOffer }) {
         </Badge>
       </TableCell>
       <TableCell className="hidden md:table-cell">
-        {offer.lastRevisedDate && format(offer.lastRevisedDate.toDate(), 'PPp')}
+        {lastUpdated ? format(lastUpdated, 'PPp') : '—'}
       </TableCell>
       <TableCell>
         <div className="flex items-center justify-end">

@@ -1,8 +1,8 @@
 'use client';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { useParams, useRouter } from 'next/navigation';
-import { FinancialOffer, Vehicle } from '@/types';
+import { useParams } from 'next/navigation';
+import { FinancialOffer } from '@/types';
 import { Header } from '@/components/finance-navigator/Header';
 import { Loader2 } from 'lucide-react';
 import { vehicleData } from '@/lib/data';
@@ -25,8 +25,9 @@ export default function OfferDetailPage() {
   }, [firestore, id]);
 
   const { data: offer, isLoading: isOfferLoading } = useDoc<FinancialOffer>(offerRef);
-  
-  const vehicle = vehicleData.find(v => v.id === offer?.vehicleId);
+
+  const vehicle = vehicleData.find(v => v.id === offer?.vehicleId) ||
+    vehicleData.find(v => v.modelName.toLowerCase() === offer?.vehicleModelName.toLowerCase());
   const image = PlaceHolderImages.find(p => p.id === vehicle?.id);
 
   if (isOfferLoading) {
@@ -37,7 +38,7 @@ export default function OfferDetailPage() {
     );
   }
 
-  if (!offer || !vehicle || !image) {
+  if (!offer || !vehicle) {
     return (
       <div className="flex min-h-screen w-full flex-col">
         <Header />
@@ -55,8 +56,8 @@ export default function OfferDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
             <div>
                 <div className="relative aspect-[4/3] w-full rounded-lg overflow-hidden shadow-lg">
-                    <Image 
-                        src={image.imageUrl}
+                    <Image
+                        src={image?.imageUrl || `https://picsum.photos/seed/${vehicle.id}/800/600`}
                         alt={vehicle.modelName}
                         fill
                         className="object-cover"
@@ -73,12 +74,12 @@ export default function OfferDetailPage() {
                         <CardDescription className="text-lg">{vehicle.keySpecs}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                        <p className="text-muted-foreground">{offer.offerDetails}</p>
+                        <p className="text-muted-foreground">{offer.offerDetails || 'Explore this limited-time offer tailored for you.'}</p>
                         <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                             <div className="font-medium">MSRP</div>
                             <div className="text-right">{formatCurrency(offer.msrp)}</div>
                             <div className="font-medium">Incentives</div>
-                            <div className="text-right text-green-600">-{formatCurrency(offer.incentives)}</div>
+                            <div className="text-right text-green-600">-{formatCurrency(offer.incentives ?? 0)}</div>
                             <div className="font-medium">Term</div>
                             <div className="text-right">{offer.termMonths} Months</div>
                             {offer.apr !== undefined && <div className="font-medium">APR</div>}
@@ -88,7 +89,7 @@ export default function OfferDetailPage() {
                             {offer.residualPercentage !== undefined && <div className="font-medium">Residual</div>}
                             {offer.residualPercentage !== undefined && <div className="text-right">{offer.residualPercentage}%</div>}
                             <div className="font-medium">Fees</div>
-                            <div className="text-right">{formatCurrency(offer.fees)}</div>
+                            <div className="text-right">{formatCurrency(offer.fees ?? 0)}</div>
                         </div>
                          <Link href={{ pathname: '/checkout', query: { offer: JSON.stringify(offer) } }} passHref>
                             <Button size="lg" className="w-full">I'm Interested</Button>

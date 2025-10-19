@@ -17,7 +17,14 @@ const tradeInSchema = z.object({
   vin: z.string().length(17, 'VIN must be 17 characters'),
 });
 
-const mockVinData = {
+type VinInfo = {
+  make: string;
+  model: string;
+  year: number;
+  trim: string;
+};
+
+const mockVinData: Record<string, VinInfo> = {
   '12345678901234567': {
     make: 'Toyota',
     model: 'Camry',
@@ -37,7 +44,7 @@ function PhotoUpload({ label }: { label: string }) {
 }
 
 export function TradeInForm() {
-  const [vinData, setVinData] = useState<any>(null);
+  const [vinData, setVinData] = useState<VinInfo | null>(null);
   const { tradeInValue } = useCheckout();
 
   const form = useForm<z.infer<typeof tradeInSchema>>({
