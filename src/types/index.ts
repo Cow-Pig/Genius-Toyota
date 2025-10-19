@@ -143,6 +143,16 @@ export interface MockCreditReport {
   reportDate: string;
 }
 
+export interface MockInventoryVehicle {
+  id: string;
+  vehicleId: string;
+  vin: string;
+  color: string;
+  msrp: number;
+  packages: string[];
+  available: boolean;
+}
+
 export interface IncomeVerificationRecord {
   method: 'bankLink' | 'irsTranscript' | 'manualUpload';
   status: VerificationStatus;

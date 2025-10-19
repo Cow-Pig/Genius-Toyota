@@ -12,6 +12,7 @@ import type {
   MockIrsTranscript,
   MockCreditReport,
   MockCreditTradeline,
+  MockInventoryVehicle,
   MockDataProviderConfig,
   MockDataProviderFailureMode,
 } from '@/types';
@@ -31,7 +32,7 @@ type MockDataProviderContextValue = {
   fetchBankLink: () => Promise<MockBankLinkResult>;
   fetchIrsTranscripts: () => Promise<MockIrsTranscript[]>;
   fetchCreditReport: () => Promise<MockCreditReport>;
-  fetchInventory: () => Promise<InventoryFixture['inventory']>;
+  fetchInventory: () => Promise<MockInventoryVehicle[]>;
 };
 
 const defaultConfig: MockDataProviderConfig = {
@@ -179,16 +180,31 @@ export function MockDataProviderProvider({
             })) as MockCreditTradeline[],
           } satisfies MockCreditReport;
         },
-        undefined,
+        (report) => ({
+          ...report,
+          score: Math.max(report.score - 120, 520),
+          scoreBand: 'Needs Attention',
+        }),
         'Mock credit bureau',
       );
 
     const fetchInventory = () =>
-      applyFailureMode<InventoryFixture['inventory']>(
+      applyFailureMode<MockInventoryVehicle[]>(
         config.latencyMs,
         config.failureModes.inventory,
-        () => (inventoryFixture as InventoryFixture).inventory,
-        undefined,
+        () =>
+          (inventoryFixture as InventoryFixture).inventory.map((item) => ({
+            ...item,
+          })) as MockInventoryVehicle[],
+        (inventory) =>
+          inventory.map((item, index) =>
+            index === 0
+              ? {
+                  ...item,
+                  available: false,
+                }
+              : item,
+          ),
         'Mock inventory feed',
       );
 

@@ -9,6 +9,7 @@ import { SchedulingForm } from '@/components/checkout/SchedulingForm';
 import { OfferDetails } from '@/components/checkout/OfferDetails';
 import { TotalsCard } from '@/components/checkout/TotalsCard';
 import { IncomeVerificationFlow } from '@/components/checkout/IncomeVerificationFlow';
+import { CreditApplicationFlow } from '@/components/checkout/CreditApplicationFlow';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -27,6 +28,8 @@ export default function CheckoutPage() {
         <OfferDetails />
 
         <IncomeVerificationFlow />
+
+        <CreditApplicationFlow />
 
         <TradeInForm />
 
