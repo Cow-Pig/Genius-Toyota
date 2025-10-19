@@ -16,6 +16,68 @@ const defaultScenario: Scenario = {
   annualMileage: 12000,
 };
 
+const createScenarioId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `scenario-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const normalizeSavedScenarios = (raw: unknown[]): SavedScenario[] => {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((entry, index) => {
+      if (!entry || typeof entry !== 'object') return null;
+
+      const record = entry as Partial<SavedScenario> & {
+        scenario?: Scenario;
+        vehicle?: Vehicle;
+        monthlyPayment?: number;
+        totalCost?: number;
+        dueAtSigning?: number;
+        termMonths?: number;
+        planType?: 'finance' | 'lease';
+        savedAt?: string;
+        id?: string;
+      };
+
+      if (!record.vehicle || !record.scenario) {
+        return null;
+      }
+
+      const planType = record.planType === 'lease' ? 'lease' : 'finance';
+      const monthlyPayment = typeof record.monthlyPayment === 'number' ? record.monthlyPayment : 0;
+      const leaseTerm = record.scenario.leaseTerm ?? defaultScenario.leaseTerm;
+      const financeTerm = record.scenario.financeTerm ?? defaultScenario.financeTerm;
+      const termMonths = typeof record.termMonths === 'number'
+        ? record.termMonths
+        : planType === 'lease'
+          ? leaseTerm
+          : financeTerm;
+
+      const calculatedTotal = monthlyPayment * termMonths;
+      const totalCost = typeof record.totalCost === 'number' ? record.totalCost : calculatedTotal;
+      const dueAtSigning = typeof record.dueAtSigning === 'number'
+        ? record.dueAtSigning
+        : (record.scenario.downPayment ?? defaultScenario.downPayment) + (record.scenario.tradeInValue ?? 0) + monthlyPayment;
+
+      return {
+        id: record.id ?? `legacy-${index}-${createScenarioId()}`,
+        planType,
+        scenario: record.scenario,
+        vehicle: record.vehicle,
+        monthlyPayment,
+        dueAtSigning,
+        totalCost,
+        termMonths,
+        savedAt: record.savedAt ?? new Date().toISOString(),
+      } satisfies SavedScenario;
+    })
+    .filter((value): value is SavedScenario => Boolean(value));
+};
+
 interface ScenarioContextValue {
   scenario: Scenario;
   updateScenario: (updates: Partial<Scenario>) => void;
@@ -24,8 +86,7 @@ interface ScenarioContextValue {
   activeVehicle: Vehicle | null;
   setActiveVehicle: (vehicle: Vehicle | null) => void;
   savedScenarios: SavedScenario[];
-  saveCurrentScenario: () => void;
-  removeScenario: (index: number) => void;
+  saveScenarioOption: (option: 'finance' | 'lease') => SavedScenario | null;
   drawerState: DrawerState;
   setDrawerState: (state: DrawerState) => void;
 }
@@ -47,7 +108,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       if (savedData) {
         const parsed = JSON.parse(savedData);
         setScenario(parsed.scenario || defaultScenario);
-        setSavedScenarios(parsed.savedScenarios || []);
+        setSavedScenarios(normalizeSavedScenarios(parsed.savedScenarios || []));
         setIsOnboarded(true); // User is considered onboarded if there's saved data.
       } else {
         setIsOnboarded(false); // No data, needs onboarding.
@@ -92,31 +153,68 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const saveCurrentScenario = () => {
-    if (!activeVehicle || savedScenarios.length >= 3) return;
+  const saveScenarioOption = (option: 'finance' | 'lease'): SavedScenario | null => {
+    if (!activeVehicle) return null;
 
     const rates = getRatesForTier(scenario.creditScoreTier);
-    const financePayment = calculateLoanPayment(activeVehicle.msrp - scenario.downPayment, rates.financeApr, scenario.financeTerm);
-    
-    const newSavedScenario: SavedScenario = {
+
+    const { monthlyPayment, termMonths, dueAtSigning, totalCost } = (() => {
+      if (option === 'lease') {
+        const payment = calculateLeasePayment(
+          activeVehicle.msrp,
+          activeVehicle.residualValue,
+          scenario.leaseTerm,
+          rates.moneyFactor,
+        );
+        const term = scenario.leaseTerm;
+        return {
+          monthlyPayment: payment,
+          termMonths: term,
+          dueAtSigning: scenario.downPayment + scenario.tradeInValue + payment,
+          totalCost: payment * term + scenario.downPayment - scenario.tradeInValue,
+        };
+      }
+
+      const financePrincipal = Math.max(
+        activeVehicle.msrp - scenario.downPayment - scenario.tradeInValue,
+        0,
+      );
+      const payment = calculateLoanPayment(
+        financePrincipal,
+        rates.financeApr,
+        scenario.financeTerm,
+      );
+      const term = scenario.financeTerm;
+      return {
+        monthlyPayment: payment,
+        termMonths: term,
+        dueAtSigning: scenario.downPayment + scenario.tradeInValue + payment,
+        totalCost: payment * term + scenario.downPayment - scenario.tradeInValue,
+      };
+    })();
+
+    const savedScenario: SavedScenario = {
+      id: createScenarioId(),
+      planType: option,
       scenario: { ...scenario },
       vehicle: activeVehicle,
-      monthlyPayment: financePayment, 
+      monthlyPayment,
+      dueAtSigning,
+      totalCost,
+      termMonths,
+      savedAt: new Date().toISOString(),
     };
 
     setSavedScenarios((prev: SavedScenario[]) => {
-        const newSaved = [...prev, newSavedScenario];
-        persistState({ scenario, savedScenarios: newSaved });
-        return newSaved;
+        const filtered = prev.filter(
+          (item) => !(item.planType === option && item.vehicle.id === activeVehicle.id),
+        );
+        const updated = [...filtered, savedScenario].slice(-6);
+        persistState({ scenario, savedScenarios: updated });
+        return updated;
     });
-  };
 
-  const removeScenario = (index: number) => {
-    setSavedScenarios((prev: SavedScenario[]) => {
-        const newSaved = prev.filter((_, i) => i !== index);
-        persistState({ scenario, savedScenarios: newSaved });
-        return newSaved;
-    });
+    return savedScenario;
   };
 
 
@@ -130,8 +228,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
         activeVehicle,
         setActiveVehicle,
         savedScenarios,
-        saveCurrentScenario,
-        removeScenario,
+        saveScenarioOption,
         drawerState,
         setDrawerState
       }}

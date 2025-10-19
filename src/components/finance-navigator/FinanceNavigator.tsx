@@ -5,7 +5,6 @@ import { OnboardingModal } from './OnboardingModal';
 import { LeftSummaryRail } from './LeftSummaryRail';
 import { SimulationCanvas } from './SimulationCanvas';
 import { DiscoveryRail } from './DiscoveryRail';
-import { ScenarioTray } from './ScenarioTray';
 import { MathDrawer } from './MathDrawer';
 
 export function FinanceNavigator() {
@@ -21,7 +20,6 @@ export function FinanceNavigator() {
           </div>
         </div>
       </main>
-      <ScenarioTray />
       <OnboardingModal />
       <MathDrawer />
     </div>

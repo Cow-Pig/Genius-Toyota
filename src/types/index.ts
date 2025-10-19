@@ -73,9 +73,15 @@ export interface Scenario {
 }
 
 export interface SavedScenario {
+  id: string;
+  planType: 'finance' | 'lease';
   scenario: Scenario;
   vehicle: Vehicle;
   monthlyPayment: number;
+  dueAtSigning: number;
+  totalCost: number;
+  termMonths: number;
+  savedAt: string;
 }
 
 export interface DrawerState {

@@ -15,9 +15,11 @@ import { ArrowRight, CheckCircle, TrendingUp } from 'lucide-react';
 import AnimatedNumber from './AnimatedNumber';
 import { formatCurrency } from '@/lib/utils';
 import { useMemo } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 export function ComparisonView() {
-  const { scenario, activeVehicle, setDrawerState } = useScenario();
+  const { scenario, activeVehicle, setDrawerState, saveScenarioOption } = useScenario();
+  const { toast } = useToast();
 
   const rates = getRatesForTier(scenario.creditScoreTier);
 
@@ -59,6 +61,22 @@ export function ComparisonView() {
     );
   }
 
+  const handleSaveScenario = (option: 'finance' | 'lease') => {
+    const saved = saveScenarioOption(option);
+    if (saved) {
+      toast({
+        title: `${option === 'finance' ? 'Finance' : 'Lease'} scenario saved`,
+        description: `${saved.vehicle.modelName} • ${formatCurrency(saved.monthlyPayment)}/mo for ${saved.termMonths} months`,
+      });
+    } else {
+      toast({
+        title: 'Select a vehicle to save',
+        description: 'Choose a vehicle to capture its payment scenario before saving.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -82,10 +100,13 @@ export function ComparisonView() {
               <li className="flex justify-between">Total cost ({scenario.financeTerm} mos): <span>{formatCurrency(financeTotal)}</span></li>
             </ul>
           </div>
-          <div className="mt-6">
+          <div className="mt-6 space-y-2">
             <p className="text-sm flex items-start gap-2 mb-4"><CheckCircle className="size-4 text-green-600 shrink-0 mt-0.5" /> Ideal for long-term ownership and unlimited mileage.</p>
             <Button variant="outline" className="w-full" onClick={() => setDrawerState({ open: true, type: 'finance' })}>
               See the Math <ArrowRight className="ml-2" />
+            </Button>
+            <Button className="w-full" onClick={() => handleSaveScenario('finance')}>
+              Save Finance Scenario
             </Button>
           </div>
         </div>
@@ -104,10 +125,13 @@ export function ComparisonView() {
               <li className="flex justify-between">Total cost ({scenario.leaseTerm} mos): <span>{formatCurrency(leaseTotal)}</span></li>
             </ul>
           </div>
-          <div className="mt-6">
+          <div className="mt-6 space-y-2">
             <p className="text-sm flex items-start gap-2 mb-4"><CheckCircle className="size-4 text-green-600 shrink-0 mt-0.5" /> Great for enjoying the latest models with warranty coverage.</p>
             <Button variant="outline" className="w-full" onClick={() => setDrawerState({ open: true, type: 'lease' })}>
               See the Math <ArrowRight className="ml-2" />
+            </Button>
+            <Button className="w-full" onClick={() => handleSaveScenario('lease')}>
+              Save Lease Scenario
             </Button>
           </div>
         </div>
