@@ -97,7 +97,8 @@ service cloud.firestore {
      * @deny  (update, delete): if false; // Purchases are immutable once written
      */
     match /offerPurchases/{purchaseId} {
-      allow read: if canAccessPurchase();
+      allow get: if canAccessPurchase();
+      allow list: if isSignedIn();
       allow create: if isCreatingOwnPurchase();
       allow update: if false;
       allow delete: if false;
