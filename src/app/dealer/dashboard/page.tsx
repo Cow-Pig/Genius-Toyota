@@ -19,8 +19,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, Timestamp } from 'firebase/firestore';
-import { FinancialOffer } from '@/types';
+import { collection, query, where, doc, Timestamp, orderBy } from 'firebase/firestore';
+import { FinancialOffer, OfferPurchase } from '@/types';
 import { format } from 'date-fns';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
@@ -108,6 +108,20 @@ function getDate(value: FinancialOffer['lastRevisedDate']) {
   return null;
 }
 
+function getTimestampDate(value: unknown) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (value instanceof Timestamp) return value.toDate();
+  if (isTimestampLike(value)) {
+    return new Date(value.seconds * 1000);
+  }
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
 function OfferRow({ offer }: { offer: FinancialOffer }) {
   const lastUpdated = getDate(offer.lastRevisedDate);
   return (
@@ -139,13 +153,24 @@ function OfferRow({ offer }: { offer: FinancialOffer }) {
 
 export default function DealerDashboardPage() {
   const { firestore, user } = useFirebase();
-  
+
   const offersQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'financialOffers'), where('dealerId', '==', user.uid));
   }, [firestore, user]);
 
   const { data: offers, isLoading } = useCollection<FinancialOffer>(offersQuery);
+
+  const purchasesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(
+      collection(firestore, 'offerPurchases'),
+      where('dealerId', '==', user.uid),
+      orderBy('purchasedAt', 'desc'),
+    );
+  }, [firestore, user]);
+
+  const { data: purchases, isLoading: isLoadingPurchases } = useCollection<OfferPurchase>(purchasesQuery);
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -201,6 +226,93 @@ export default function DealerDashboardPage() {
                     <TableRow>
                       <TableCell colSpan={7} className="text-center">
                         No offers created yet.
+                      </TableCell>
+                    </TableRow>
+                  )
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Purchases</CardTitle>
+            <CardDescription>See which customers have committed to your offers in real time.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Purchase Date</TableHead>
+                  <TableHead className="hidden lg:table-cell">Delivery</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingPurchases && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center">
+                      Loading purchases...
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!isLoadingPurchases && purchases && purchases.length > 0 ? (
+                  purchases.map((purchase) => {
+                    const purchasedAt = getTimestampDate(purchase.purchasedAt);
+                    const appointmentDate = getTimestampDate(purchase.appointment?.date ?? null);
+                    const customerName = [purchase.customer.firstName, purchase.customer.lastName]
+                      .filter(Boolean)
+                      .join(' ');
+                    return (
+                      <TableRow key={purchase.id}>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{customerName || 'Unknown customer'}</span>
+                            {purchase.selectedAddons.length > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                Add-ons: {purchase.selectedAddons.map((addon) => addon.name).join(', ')}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-sm text-muted-foreground">
+                            <span>{purchase.customer.email}</span>
+                            {purchase.customer.phone && <span>{purchase.customer.phone}</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{purchase.vehicleModelName}</span>
+                            <Badge variant={purchase.offerType === 'lease' ? 'outline' : 'secondary'}>
+                              {purchase.offerType}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {purchasedAt ? format(purchasedAt, 'PPp') : '—'}
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {purchase.appointment ? (
+                            <div className="flex flex-col text-sm text-muted-foreground">
+                              <span className="capitalize">{purchase.appointment.method}</span>
+                              {appointmentDate && <span>{format(appointmentDate, 'PP')}</span>}
+                              {purchase.appointment.timeSlot && <span>{purchase.appointment.timeSlot}</span>}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Not scheduled</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
+                  !isLoadingPurchases && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center">
+                        No purchases yet.
                       </TableCell>
                     </TableRow>
                   )
