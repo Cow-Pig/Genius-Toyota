@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CreditCard, Lock } from 'lucide-react';
 
 const paymentSchema = z.object({
+  shopperEmail: z.string().email('Enter a valid email address'),
   cardholderName: z.string().min(1, 'Cardholder name is required'),
   cardNumber: z.string().regex(/^(\d{4} ?){4}$/, 'Invalid card number'),
   expiryDate: z.string().regex(/^(0[1-9]|1[0-2])\/?([0-9]{4}|[0-9]{2})$/, 'Invalid expiry date (MM/YY)'),
@@ -21,10 +22,12 @@ const paymentSchema = z.object({
 export function PaymentForm() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isPaid, setIsPaid] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState('');
 
   const form = useForm<z.infer<typeof paymentSchema>>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
+        shopperEmail: '',
         cardholderName: '',
         cardNumber: '',
         expiryDate: '',
@@ -36,6 +39,7 @@ export function PaymentForm() {
     setIsProcessing(true);
     // Simulate API call to payment processor
     await new Promise(resolve => setTimeout(resolve, 2000));
+    setConfirmationEmail(values.shopperEmail);
     setIsProcessing(false);
     setIsPaid(true);
   }
@@ -48,6 +52,9 @@ export function PaymentForm() {
             </CardHeader>
             <CardContent>
                 <p className='text-green-600 font-semibold'>Your deposit has been successfully processed.</p>
+                {confirmationEmail && (
+                  <p className='text-sm text-muted-foreground mt-2'>We'll send a receipt and next steps to {confirmationEmail}.</p>
+                )}
             </CardContent>
       </Card>
     )
@@ -57,11 +64,24 @@ export function PaymentForm() {
     <Card>
       <CardHeader>
         <CardTitle>Pay Deposit</CardTitle>
-        <CardDescription>Enter your payment information to securely place your deposit.</CardDescription>
+        <CardDescription>Enter your contact and payment information to securely place your deposit.</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="shopperEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email for receipts</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="email" placeholder='jamie@example.com' autoComplete='email' />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="cardholderName"
