@@ -81,6 +81,12 @@ service cloud.firestore {
       allow update, delete: if isExistingOwner(resource.data.dealerId);
       allow read: if true;
       allow write: if false;
+
+      match /history/{historyId} {
+        allow get, list: if canAccessFinancialOffer(financialOfferId);
+        allow create: if canAccessFinancialOffer(financialOfferId);
+        allow update, delete: if false;
+      }
     }
 
     /**
@@ -218,11 +224,15 @@ service cloud.firestore {
      * @principle Access control based on FinancialOffer ownership.
      */
     match /negotiationThreads/{negotiationThreadId} {
-       allow get: if get(/databases/$(database)/documents/financialOffers/$(resource.data.financialOfferId)).data.dealerId == request.auth.uid;
-        allow list: if true;
-        allow create: if isSignedIn() && request.resource.data.financialOfferId != null;
-        allow update: if false;
-        allow delete: if false;
+      allow get: if canAccessFinancialOffer(resource.data.financialOfferId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.financialOfferId != null;
+      allow update: if
+        isSignedIn() &&
+        resource != null &&
+        request.resource.data.financialOfferId == resource.data.financialOfferId &&
+        request.resource.data.dealerId == resource.data.dealerId;
+      allow delete: if false;
     }
 
     /**
@@ -236,11 +246,16 @@ service cloud.firestore {
      * @principle Access control mirrors the parent thread.
      */
     match /negotiationThreads/{negotiationThreadId}/messages/{messageId} {
-        allow get: if get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId != null && get(/databases/$(database)/documents/financialOffers/$(get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId)).data.dealerId == request.auth.uid;
-        allow list: if true;
-        allow create: if isSignedIn() && request.resource.data.negotiationThreadId == negotiationThreadId;
-        allow update: if false;
-        allow delete: if false;
+      allow get: if canAccessFinancialOffer(
+        get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId
+      );
+      allow list: if isSignedIn();
+      allow create: if
+        isSignedIn() &&
+        request.resource.data.negotiationThreadId == negotiationThreadId &&
+        request.resource.data.authorId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
@@ -305,6 +320,13 @@ service cloud.firestore {
 
     function isExistingOwner(userId) {
       return isSignedIn() && isOwner(userId) && resource != null;
+    }
+
+    function canAccessFinancialOffer(financialOfferId) {
+      return
+        isSignedIn() &&
+        financialOfferId != null &&
+        get(/databases/$(database)/documents/financialOffers/$(financialOfferId)).data.dealerId == request.auth.uid;
     }
   }
 }
