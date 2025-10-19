@@ -9,12 +9,21 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { PrequalDialog, PrequalFormValues } from '../checkout/PrequalDialog';
 import { SavedScenariosDialog } from './SavedScenariosDialog';
-import { useMockDataProvider } from '@/lib/mock-data-provider';
+import { useCustomerJourney } from '@/contexts/CustomerJourneyContext';
+
+const DEFAULT_DEALER = {
+  id: 'dealer-marina-del-rey',
+  name: 'Toyota of Marina del Rey',
+};
 
 export function Header() {
   const { scenario, savedScenarios } = useScenario();
   const { toast } = useToast();
-  const { fetchCreditReport } = useMockDataProvider();
+  const {
+    state: journeyState,
+    submitPrequalification,
+    isSubmitting: isJourneySubmitting,
+  } = useCustomerJourney();
   const [isPrequalOpen, setIsPrequalOpen] = useState(false);
   const [isSavedOpen, setIsSavedOpen] = useState(false);
   const [isSubmittingPrequal, setIsSubmittingPrequal] = useState(false);
@@ -22,15 +31,15 @@ export function Header() {
 
   const handleShare = () => {
     const data = {
-        scenario,
-        savedScenarios,
+      scenario,
+      savedScenarios,
     };
     const serialized = btoa(JSON.stringify(data));
     const url = `${window.location.origin}?scenario=${serialized}`;
     navigator.clipboard.writeText(url);
     toast({
-        title: "Link Copied!",
-        description: "Your scenario has been copied to your clipboard.",
+      title: 'Link Copied!',
+      description: 'Your scenario has been copied to your clipboard.',
     });
   };
 
@@ -42,20 +51,22 @@ export function Header() {
   const handlePrequalSubmit = async (values: PrequalFormValues) => {
     setIsSubmittingPrequal(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      const report = await fetchCreditReport();
+      await submitPrequalification({
+        scenario,
+        customerProfile: {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+          phone: values.phone,
+          city: values.city,
+          state: values.state,
+        },
+        softPullConsent: values.consent,
+        dealer: journeyState.dealer ?? DEFAULT_DEALER,
+      });
+
       setLastPrequalSubmission(values);
-      toast({
-        title: 'Pre-qualification submitted',
-        description: `We captured your info and pulled a mock ${report.score} (${report.scoreBand}) snapshot. A dealer will follow up shortly.`,
-      });
       setIsPrequalOpen(false);
-    } catch (error) {
-      toast({
-        title: 'Unable to complete pre-qualification',
-        description: error instanceof Error ? error.message : 'Please try again shortly.',
-        variant: 'destructive',
-      });
     } finally {
       setIsSubmittingPrequal(false);
     }
@@ -112,6 +123,7 @@ export function Header() {
               size="sm"
               className="ml-2 bg-primary hover:bg-primary/90"
               onClick={() => setIsPrequalOpen(true)}
+              disabled={isSubmittingPrequal || isJourneySubmitting}
             >
               Get Pre-Qualified
             </Button>
@@ -122,7 +134,7 @@ export function Header() {
         open={isPrequalOpen}
         onOpenChange={setIsPrequalOpen}
         onSubmit={handlePrequalSubmit}
-        isSubmitting={isSubmittingPrequal}
+        isSubmitting={isSubmittingPrequal || isJourneySubmitting}
         initialValues={lastPrequalSubmission ?? undefined}
       />
       <SavedScenariosDialog open={isSavedOpen} onOpenChange={setIsSavedOpen} />

@@ -5,6 +5,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 import { ScenarioProvider } from '@/contexts/ScenarioContext';
+import { CustomerJourneyProvider } from '@/contexts/CustomerJourneyContext';
 import { FirebaseClientProvider } from '@/firebase';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { MockDataProviderProvider } from '@/lib/mock-data-provider';
@@ -34,8 +35,10 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <MockDataProviderProvider>
             <ScenarioProvider>
-              {children}
-              <Toaster />
+              <CustomerJourneyProvider>
+                {children}
+                <Toaster />
+              </CustomerJourneyProvider>
             </ScenarioProvider>
           </MockDataProviderProvider>
           <FirebaseErrorListener />

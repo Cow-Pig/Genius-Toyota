@@ -84,7 +84,7 @@ export function TradeInForm() {
       } else {
         setVinData(null);
         setStatus('Needs Attention');
-        setError('VIN not found in mock inventory feed. Upload documents for manual verification.');
+        setError('VIN not found in our inventory feed. Upload documents for manual verification.');
       }
     } catch (err) {
       setVinData(null);
@@ -102,7 +102,7 @@ export function TradeInForm() {
           <div>
             <CardTitle>Trade-In Vehicle</CardTitle>
             <CardDescription>
-              Decode the VIN to surface condition flags, packages, and availability from the mock inventory feed.
+              Decode the VIN to surface condition flags, packages, and availability from the live inventory feed.
             </CardDescription>
           </div>
           <StatusBadge status={status} />
@@ -132,7 +132,11 @@ export function TradeInForm() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className={`h-4 w-4 ${isDecoding ? 'animate-spin text-primary' : 'text-muted-foreground'}`} />
-                    <span>{isDecoding ? 'Decoding VIN with mock provider…' : 'VIN decoding runs against deterministic fixtures.'}</span>
+                    <span>
+                      {isDecoding
+                        ? 'Decoding VIN with partner provider…'
+                        : 'VIN decoding runs against our latest dealer snapshot.'}
+                    </span>
                   </div>
                   {vinData ? (
                     <div className="rounded-lg border bg-muted/30 p-4">
