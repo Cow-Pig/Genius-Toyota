@@ -175,11 +175,12 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
       <DialogContent
         className={cn(
           isCompareMode ? 'sm:max-w-5xl lg:max-w-6xl' : 'sm:max-w-3xl',
-          'space-y-4',
+          'max-h-[85vh] overflow-hidden p-6',
         )}
       >
-        {isCompareMode ? (
-          <>
+        <div className="flex h-full min-h-0 flex-col gap-4">
+          {isCompareMode ? (
+            <>
             <DialogHeader className="space-y-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -197,27 +198,29 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                 </Button>
               </div>
             </DialogHeader>
-            <Tabs defaultValue="costs" className="space-y-4">
-              <TabsList className="grid gap-2 bg-muted/60 p-1 sm:max-w-md sm:grid-cols-3">
-                <TabsTrigger value="costs">Costs</TabsTrigger>
-                <TabsTrigger value="terms">Terms</TabsTrigger>
-                <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
-              </TabsList>
-              <TabsContent value="costs" className="space-y-3">
-                <div className="overflow-x-auto rounded-lg border bg-background">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[220px]">Scenario</TableHead>
-                        <TableHead>Monthly payment</TableHead>
-                        <TableHead>Due at signing</TableHead>
-                        <TableHead>Total paid</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedScenarios.map((scenario) => (
-                        <TableRow key={scenario.id}>
+            <ScrollArea className="flex-1 min-h-0 pr-2">
+              <div className="space-y-4">
+                <Tabs defaultValue="costs" className="space-y-4">
+                  <TabsList className="grid gap-2 bg-muted/60 p-1 sm:max-w-md sm:grid-cols-3">
+                    <TabsTrigger value="costs">Costs</TabsTrigger>
+                    <TabsTrigger value="terms">Terms</TabsTrigger>
+                    <TabsTrigger value="vehicle">Vehicle</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="costs" className="space-y-3">
+                    <div className="overflow-x-auto rounded-lg border bg-background">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[220px]">Scenario</TableHead>
+                            <TableHead>Monthly payment</TableHead>
+                            <TableHead>Due at signing</TableHead>
+                            <TableHead>Total paid</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedScenarios.map((scenario) => (
+                            <TableRow key={scenario.id}>
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <span className="font-semibold">{scenario.vehicle.modelName}</span>
@@ -249,29 +252,29 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              <TabsContent value="terms" className="space-y-3">
-                <div className="overflow-x-auto rounded-lg border bg-background">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[220px]">Scenario</TableHead>
-                        <TableHead>Plan type</TableHead>
-                        <TableHead>Term length</TableHead>
-                        <TableHead>Credit tier</TableHead>
-                        <TableHead>Down + trade</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedScenarios.map((scenario) => {
-                        const combinedDown = scenario.scenario.downPayment + scenario.scenario.tradeInValue;
-                        return (
-                          <TableRow key={`${scenario.id}-terms`}>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="terms" className="space-y-3">
+                    <div className="overflow-x-auto rounded-lg border bg-background">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[220px]">Scenario</TableHead>
+                            <TableHead>Plan type</TableHead>
+                            <TableHead>Term length</TableHead>
+                            <TableHead>Credit tier</TableHead>
+                            <TableHead>Down + trade</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedScenarios.map((scenario) => {
+                            const combinedDown = scenario.scenario.downPayment + scenario.scenario.tradeInValue;
+                            return (
+                              <TableRow key={`${scenario.id}-terms`}>
                             <TableCell>
                               <div className="flex flex-col gap-1">
                                 <span className="font-semibold">{scenario.vehicle.modelName}</span>
@@ -302,25 +305,25 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                             </TableCell>
                           </TableRow>
                         );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-              <TabsContent value="vehicle" className="space-y-3">
-                <div className="overflow-x-auto rounded-lg border bg-background">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[220px]">Scenario</TableHead>
-                        <TableHead>Vehicle MSRP</TableHead>
-                        <TableHead>Vehicle highlights</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {selectedScenarios.map((scenario) => (
-                        <TableRow key={`${scenario.id}-vehicle`}>
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="vehicle" className="space-y-3">
+                    <div className="overflow-x-auto rounded-lg border bg-background">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[220px]">Scenario</TableHead>
+                            <TableHead>Vehicle MSRP</TableHead>
+                            <TableHead>Vehicle highlights</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedScenarios.map((scenario) => (
+                            <TableRow key={`${scenario.id}-vehicle`}>
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               <span className="font-semibold">{scenario.vehicle.modelName}</span>
@@ -341,12 +344,14 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </TabsContent>
-            </Tabs>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </ScrollArea>
           </>
         ) : (
           <>
@@ -357,7 +362,7 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
               </DialogDescription>
             </DialogHeader>
             {sortedScenarios.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-10 text-center text-sm text-muted-foreground">
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center text-sm text-muted-foreground">
                 <BookmarkCheck className="h-10 w-10 text-muted-foreground/70" />
                 <p>No saved scenarios yet.</p>
                 <p className="max-w-xs">
@@ -365,7 +370,7 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                 </p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="flex flex-1 min-h-0 flex-col gap-4">
                 <div className="flex flex-col gap-3 rounded-md border border-dashed border-muted-foreground/40 bg-muted/30 p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-medium">Select scenarios to compare</p>
@@ -390,7 +395,7 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                     </Button>
                   </div>
                 </div>
-                <ScrollArea className="max-h-[60vh] pr-2">
+                <ScrollArea className="flex-1 min-h-0 pr-2">
                   <div className="space-y-3">
                     {sortedScenarios.map((item) => {
                       const isSelected = selectedScenarioIds.includes(item.id);
@@ -400,7 +405,7 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                           key={item.id}
                           className={cn(
                             'shadow-sm transition',
-                            isSelected && 'ring-2 ring-primary/60',
+                            isSelected && 'ring-2 ring-inset ring-primary/60',
                           )}
                         >
                           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -478,7 +483,8 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
               </div>
             )}
           </>
-        )}
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

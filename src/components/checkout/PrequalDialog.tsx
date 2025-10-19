@@ -93,7 +93,7 @@ export function PrequalDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden p-0">
-        <div className="flex h-full flex-col">
+        <div className="flex h-full min-h-0 flex-col">
           <DialogHeader className="space-y-1.5 px-5 pt-5 pb-4">
             <DialogTitle className="text-xl font-semibold">Get prequalified</DialogTitle>
             <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
@@ -102,11 +102,11 @@ export function PrequalDialog({
           </DialogHeader>
           <Form {...form}>
             <form
-              className="flex flex-1 flex-col gap-3 px-5 pb-5"
+              className="flex flex-1 min-h-0 flex-col gap-3 px-5 pb-5"
               onSubmit={form.handleSubmit(handleSubmit)}
               noValidate
             >
-              <ScrollArea className="flex-1 pr-3">
+              <ScrollArea className="flex-1 min-h-0 pr-3">
                 <div className={`${sectionSpacing} pb-3`}>
                 <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                   <FormField
