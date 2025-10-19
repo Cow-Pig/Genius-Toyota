@@ -92,14 +92,12 @@ service cloud.firestore {
     /**
      * @description Allows dealers to record purchases from checkout while ensuring they can only access their own records.
      * @path /offerPurchases/{purchaseId}
-     * @allow (get): if canAccessPurchase();
-     * @allow (list): if isDealerScopedQuery();
+     * @allow (read): if canAccessPurchase();
      * @allow (create): if isCreatingOwnPurchase();
      * @deny  (update, delete): if false; // Purchases are immutable once written
      */
     match /offerPurchases/{purchaseId} {
-      allow get: if canAccessPurchase();
-      allow list: if isDealerScopedQuery();
+      allow read: if canAccessPurchase();
       allow create: if isCreatingOwnPurchase();
       allow update: if false;
       allow delete: if false;
@@ -347,12 +345,6 @@ service cloud.firestore {
         resource != null &&
         resource.data.dealerId is string &&
         resource.data.dealerId == request.auth.uid;
-    }
-
-    function isDealerScopedQuery() {
-      return isSignedIn() &&
-        request.query != null &&
-        request.query.where('dealerId', '==', request.auth.uid);
     }
 
     function isExistingOwner(userId) {
