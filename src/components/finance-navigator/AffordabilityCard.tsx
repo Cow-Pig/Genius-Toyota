@@ -50,7 +50,9 @@ export function AffordabilityCard() {
             </Label>
             <div className="mt-4 flex items-center gap-4">
               <span className="text-4xl font-bold text-primary font-headline tracking-tight">
-                <AnimatedNumber value={localBudget} formatter={(val) => formatCurrency(val)} />
+                <span className="inline-block min-w-[7ch] tabular-nums">
+                  <AnimatedNumber value={localBudget} formatter={(val) => formatCurrency(val)} />
+                </span>
               </span>
               <Slider
                 id="monthly-budget"
