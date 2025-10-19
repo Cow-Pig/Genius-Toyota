@@ -6,6 +6,7 @@ import { LeftSummaryRail } from './LeftSummaryRail';
 import { SimulationCanvas } from './SimulationCanvas';
 import { DiscoveryRail } from './DiscoveryRail';
 import { MathDrawer } from './MathDrawer';
+import { SubscriptionSection } from './SubscriptionSection';
 
 export function FinanceNavigator() {
   return (
@@ -18,6 +19,7 @@ export function FinanceNavigator() {
             <SimulationCanvas />
             <DiscoveryRail />
           </div>
+          <SubscriptionSection />
         </div>
       </main>
       <OnboardingModal />
