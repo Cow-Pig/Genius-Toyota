@@ -165,7 +165,7 @@ export default function DealerDashboardPage() {
     if (!firestore || !user) return null;
     return query(
       collection(firestore, 'offerPurchases'),
-      where('dealerId', '==', user.uid),
+      // where('dealerId', '==', user.uid),
       orderBy('purchasedAt', 'desc'),
     );
   }, [firestore, user]);

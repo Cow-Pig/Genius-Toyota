@@ -58,10 +58,10 @@ export default function CheckoutPage() {
         price: addon.price,
       })),
       customer: {
-        firstName: prequalSubmission?.firstName ?? undefined,
-        lastName: prequalSubmission?.lastName ?? undefined,
+        firstName: prequalSubmission?.firstName ?? '',
+        lastName: prequalSubmission?.lastName ?? '',
         email: customerEmail,
-        phone: prequalSubmission?.phone,
+        phone: prequalSubmission?.phone ?? '',
       },
       paymentContactName: paymentContact?.name ?? null,
       appointment: appointment
