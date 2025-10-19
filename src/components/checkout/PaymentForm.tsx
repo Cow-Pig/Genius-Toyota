@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreditCard, Lock } from 'lucide-react';
+import { useCheckout } from './CheckoutProvider';
 
 const paymentSchema = z.object({
   shopperEmail: z.string().email('Enter a valid email address'),
@@ -20,20 +21,29 @@ const paymentSchema = z.object({
 });
 
 export function PaymentForm() {
+  const { paymentContact, setPaymentContact } = useCheckout();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isPaid, setIsPaid] = useState(false);
-  const [confirmationEmail, setConfirmationEmail] = useState('');
+  const [isPaid, setIsPaid] = useState(Boolean(paymentContact));
+  const [confirmationEmail, setConfirmationEmail] = useState(paymentContact?.email ?? '');
 
   const form = useForm<z.infer<typeof paymentSchema>>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
-        shopperEmail: '',
-        cardholderName: '',
-        cardNumber: '',
-        expiryDate: '',
-        cvc: ''
-    }
+      shopperEmail: paymentContact?.email ?? '',
+      cardholderName: paymentContact?.name ?? '',
+      cardNumber: '',
+      expiryDate: '',
+      cvc: '',
+    },
   });
+
+  useEffect(() => {
+    if (paymentContact) {
+      form.setValue('shopperEmail', paymentContact.email);
+      form.setValue('cardholderName', paymentContact.name);
+      setConfirmationEmail(paymentContact.email);
+    }
+  }, [paymentContact, form]);
 
   async function onSubmit(values: z.infer<typeof paymentSchema>) {
     setIsProcessing(true);
@@ -42,6 +52,7 @@ export function PaymentForm() {
     setConfirmationEmail(values.shopperEmail);
     setIsProcessing(false);
     setIsPaid(true);
+    setPaymentContact({ email: values.shopperEmail, name: values.cardholderName });
   }
 
   if (isPaid) {

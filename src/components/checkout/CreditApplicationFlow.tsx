@@ -25,6 +25,7 @@ import type { MockCreditReport, VerificationStatus } from '@/types';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { PrequalDialog, PrequalFormValues } from './PrequalDialog';
+import { useCheckout } from './CheckoutProvider';
 
 const statusVariants: Record<VerificationStatus, 'default' | 'secondary' | 'destructive'> = {
   Pending: 'secondary',
@@ -52,7 +53,7 @@ export function CreditApplicationFlow() {
   const [error, setError] = useState<string | null>(null);
   const [isPrequalOpen, setIsPrequalOpen] = useState(false);
   const [isSubmittingPrequal, setIsSubmittingPrequal] = useState(false);
-  const [prequalSubmission, setPrequalSubmission] = useState<PrequalFormValues | null>(null);
+  const { prequalSubmission, setPrequalSubmission } = useCheckout();
 
   const runSoftPull = async () => {
     setIsPulling(true);
