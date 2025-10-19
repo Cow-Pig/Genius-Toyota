@@ -87,6 +87,8 @@ interface ScenarioContextValue {
   setActiveVehicle: (vehicle: Vehicle | null) => void;
   savedScenarios: SavedScenario[];
   saveScenarioOption: (option: 'finance' | 'lease') => SavedScenario | null;
+  applySavedScenario: (id: string) => SavedScenario | null;
+  removeSavedScenario: (id: string) => void;
   drawerState: DrawerState;
   setDrawerState: (state: DrawerState) => void;
 }
@@ -221,6 +223,33 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     return savedScenario;
   }, [activeVehicle, persistState, scenario]);
 
+  const applySavedScenario = useCallback(
+    (id: string): SavedScenario | null => {
+      const match = savedScenarios.find((item) => item.id === id);
+      if (!match) {
+        return null;
+      }
+
+      setScenario(match.scenario);
+      setActiveVehicle(match.vehicle);
+      setIsOnboarded(true);
+      persistState({ scenario: match.scenario, savedScenarios });
+      return match;
+    },
+    [persistState, savedScenarios, setActiveVehicle, setIsOnboarded],
+  );
+
+  const removeSavedScenario = useCallback(
+    (id: string) => {
+      setSavedScenarios((prev) => {
+        const updated = prev.filter((item) => item.id !== id);
+        persistState({ scenario, savedScenarios: updated });
+        return updated;
+      });
+    },
+    [persistState, scenario],
+  );
+
   const contextValue = useMemo(
     () => ({
       scenario,
@@ -231,6 +260,8 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       setActiveVehicle,
       savedScenarios,
       saveScenarioOption,
+      applySavedScenario,
+      removeSavedScenario,
       drawerState,
       setDrawerState,
     }),
@@ -242,6 +273,8 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       activeVehicle,
       savedScenarios,
       saveScenarioOption,
+      applySavedScenario,
+      removeSavedScenario,
       drawerState,
       setDrawerState,
     ],

@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Share2, Download, HelpCircle, Sparkles, ShoppingCart } from 'lucide-react';
+import { Share2, Download, HelpCircle, Sparkles, ShoppingCart, Bookmark } from 'lucide-react';
 import { ToyotaLogo } from '../icons/ToyotaLogo';
 import { useScenario } from '@/hooks/use-scenario';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { PrequalDialog, PrequalFormValues } from '../checkout/PrequalDialog';
+import { SavedScenariosDialog } from './SavedScenariosDialog';
 import { useMockDataProvider } from '@/lib/mock-data-provider';
 
 export function Header() {
@@ -15,6 +16,7 @@ export function Header() {
   const { toast } = useToast();
   const { fetchCreditReport } = useMockDataProvider();
   const [isPrequalOpen, setIsPrequalOpen] = useState(false);
+  const [isSavedOpen, setIsSavedOpen] = useState(false);
   const [isSubmittingPrequal, setIsSubmittingPrequal] = useState(false);
   const [lastPrequalSubmission, setLastPrequalSubmission] = useState<PrequalFormValues | null>(null);
 
@@ -89,6 +91,15 @@ export function Header() {
               <HelpCircle className="h-5 w-5" />
               <span className="sr-only">Help</span>
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setIsSavedOpen(true)}>
+              <Bookmark className="mr-2 h-4 w-4" />
+              Saved Scenarios
+              {savedScenarios.length > 0 && (
+                <span className="ml-2 inline-flex min-w-[1.75rem] items-center justify-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  {savedScenarios.length}
+                </span>
+              )}
+            </Button>
             <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 className="mr-2 h-4 w-4" />
               Share
@@ -114,6 +125,7 @@ export function Header() {
         isSubmitting={isSubmittingPrequal}
         initialValues={lastPrequalSubmission ?? undefined}
       />
+      <SavedScenariosDialog open={isSavedOpen} onOpenChange={setIsSavedOpen} />
     </>
   );
 }
