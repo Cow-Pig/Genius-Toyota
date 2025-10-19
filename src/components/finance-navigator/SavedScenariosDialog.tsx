@@ -56,6 +56,14 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
     [savedScenarios],
   );
 
+  const selectedScenarios = useMemo(
+    () =>
+      selectedScenarioIds
+        .map((id) => savedScenarios.find((scenario) => scenario.id === id))
+        .filter((value): value is typeof savedScenarios[number] => Boolean(value)),
+    [selectedScenarioIds, savedScenarios],
+  );
+
   useEffect(() => {
     setSelectedScenarioIds((prev) =>
       prev.filter((id) => savedScenarios.some((scenario) => scenario.id === id)),
@@ -67,14 +75,6 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
       setIsCompareMode(false);
     }
   }, [isCompareMode, selectedScenarios.length]);
-
-  const selectedScenarios = useMemo(
-    () =>
-      selectedScenarioIds
-        .map((id) => savedScenarios.find((scenario) => scenario.id === id))
-        .filter((value): value is typeof savedScenarios[number] => Boolean(value)),
-    [selectedScenarioIds, savedScenarios],
-  );
 
   const handleDialogChange = (nextOpen: boolean) => {
     if (!nextOpen) {
