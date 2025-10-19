@@ -43,7 +43,7 @@ export function SubscriptionSection() {
       setName('');
       toast({
         title: 'Subscription confirmed',
-        description: 'We will keep you updated with the latest Genius Toyota news.',
+        description: 'We will keep you updated with the latest Toyota Finance Navigator news.',
       });
     } catch (error) {
       console.error('Subscription failed', error);

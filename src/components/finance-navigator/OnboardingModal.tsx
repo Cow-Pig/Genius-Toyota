@@ -171,7 +171,7 @@ export function OnboardingModal() {
                 name="monthlyBudget"
                 render={({ field: { value, onChange } }) => (
                   <FormItem>
-                    <FormLabel>Target Monthly Budget</FormLabel>
+                    <FormLabel>Monthly Budget</FormLabel>
                     <div className="flex items-center gap-4">
                         <FormControl>
                             <Slider

@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         .join('\n') || 'Appointment details will be finalized soon.'
     : 'Appointment details will be finalized soon.';
 
-  const text = `Hi ${customerName},\n\nThanks for completing your purchase with Genius Toyota! Here are the details for your records:\n\nVehicle: ${vehicleModelName}\nOffer Type: ${offerType}\nTotal Price: ${usd.format(purchaseTotal)}\nDue at Signing: ${usd.format(amountDueAtSigning)}\nTrade-In Value: ${usd.format(tradeInValue ?? 0)}\nPayment Contact: ${paymentContactName ?? 'Not provided'}\n\nAdd-ons:\n${addonsSummary}\n\nAppointment:\n${appointmentSummary}\n\nIf you have any questions, reply to this email and our team will be happy to help.\n\n— The Genius Toyota Team`;
+  const text = `Hi ${customerName},\n\nThanks for completing your purchase with Toyota Finance Navigator! Here are the details for your records:\n\nVehicle: ${vehicleModelName}\nOffer Type: ${offerType}\nTotal Price: ${usd.format(purchaseTotal)}\nDue at Signing: ${usd.format(amountDueAtSigning)}\nTrade-In Value: ${usd.format(tradeInValue ?? 0)}\nPayment Contact: ${paymentContactName ?? 'Not provided'}\n\nAdd-ons:\n${addonsSummary}\n\nAppointment:\n${appointmentSummary}\n\nIf you have any questions, reply to this email and our team will be happy to help.\n\n— The Toyota Finance Navigator Team`;
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -90,14 +90,14 @@ export async function POST(request: Request) {
     <table role="presentation" width="100%" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
       <tr>
         <td style="background:#bf0d0d;color:#ffffff;padding:20px 32px;">
-          <h1 style="margin:0;font-size:24px;">Genius Toyota</h1>
+          <h1 style="margin:0;font-size:24px;">Toyota Finance Navigator</h1>
           <p style="margin:8px 0 0;font-size:16px;">Purchase Confirmation</p>
         </td>
       </tr>
       <tr>
         <td style="padding:24px 32px;">
           <p style="margin:0 0 16px;font-size:16px;">Hi ${customerName},</p>
-          <p style="margin:0 0 16px;font-size:16px;line-height:24px;">Thanks for completing your purchase with Genius Toyota! Here are the details for your records:</p>
+          <p style="margin:0 0 16px;font-size:16px;line-height:24px;">Thanks for completing your purchase with Toyota Finance Navigator! Here are the details for your records:</p>
           <table role="presentation" width="100%" style="margin:16px 0;border-collapse:collapse;">
             <tbody>
               <tr>
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
   try {
     await sendEmail({
       to: customer.email,
-      subject: 'Your Genius Toyota purchase confirmation',
+      subject: 'Your Toyota Finance Navigator purchase confirmation',
       text,
       html,
     });

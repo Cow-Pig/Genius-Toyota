@@ -40,18 +40,18 @@ export async function POST(request: Request) {
   );
 
   const greetingName = parsed.data.name?.trim() ?? 'there';
-  const textContent = `Hi ${greetingName},\n\nThanks for subscribing to Genius Toyota updates! We'll keep you posted with the latest offers and announcements.\n\nIf you ever want to unsubscribe, just reply to this email and we'll take care of it.\n\n— The Genius Toyota Team`;
+  const textContent = `Hi ${greetingName},\n\nThanks for subscribing to Toyota Finance Navigator updates! We'll keep you posted with the latest offers and announcements.\n\nIf you ever want to unsubscribe, just reply to this email and we'll take care of it.\n\n— The Toyota Finance Navigator Team`;
 
   try {
     await sendEmail({
       to: normalizedEmail,
-      subject: 'You are subscribed to Genius Toyota updates',
+      subject: 'You are subscribed to Toyota Finance Navigator updates',
       text: textContent,
     });
   } catch (error) {
     console.error('Failed to send subscription confirmation email', error);
     return NextResponse.json({ error: 'Unable to send confirmation email' }, { status: 500 });
+  } finally {
+    return NextResponse.json({ success: true });
   }
-
-  return NextResponse.json({ success: true });
 }

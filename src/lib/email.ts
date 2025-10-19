@@ -20,7 +20,7 @@ export interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions) {
   await transporter.sendMail({
-    from: `Genius Toyota <${GMAIL_ADDRESS}>`,
+    from: `Toyota Finance Navigator <${GMAIL_ADDRESS}>`,
     to: options.to,
     subject: options.subject,
     text: options.text,

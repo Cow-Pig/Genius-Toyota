@@ -46,7 +46,7 @@ export function AffordabilityCard() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
           <div className="md:col-span-2">
             <Label htmlFor="monthly-budget" className="text-base">
-              Target Monthly Payment
+              Monthly Budget
             </Label>
             <div className="mt-4 flex items-center gap-4">
               <span className="text-4xl font-bold text-primary font-headline tracking-tight">

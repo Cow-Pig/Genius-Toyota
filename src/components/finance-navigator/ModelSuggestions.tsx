@@ -146,7 +146,7 @@ export function ModelSuggestions() {
           ))
         )}
         {!isLoading && (!suggestions || suggestions.length === 0) && (
-            <p className="text-muted-foreground text-center py-8">No vehicles found for your budget. Try increasing your target monthly payment.</p>
+            <p className="text-muted-foreground text-center py-8">No vehicles found for your budget. Try increasing your monthly budget.</p>
         )}
       </CardContent>
     </Card>

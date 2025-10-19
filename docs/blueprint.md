@@ -2,7 +2,7 @@
 
 ## Core Features:
 
-- Initial Onboarding Modal: A desktop-friendly modal for initial user onboarding that captures ZIP code, credit tier, down payment/trade-in, target monthly payment, preferred terms, and annual mileage via sliders, numeric inputs, and stepper buttons.
+- Initial Onboarding Modal: A desktop-friendly modal for initial user onboarding that captures ZIP code, credit tier, down payment/trade-in, monthly budget, preferred terms, and annual mileage via sliders, numeric inputs, and stepper buttons.
 - Affordability Card: Displays a large monthly estimate with a slider and input to adjust the budget and a donut chart breaking down principal, interest, taxes, and fees.
 - Finance vs. Lease Comparison: Compares financing and leasing options in two tiles, showing payment, due at signing, total over term, and a plain-English verdict. Clicking a tile opens a Math Drawer.
 - Math Drawer: A drawer that appears when you click the tile allowing editable line items such as MSRP, incentives, taxes, APR by credit tier, term, residual percentage, and money factor, with labeled sample rates and formulas (PMT for loans; depreciation + rent charge for leases).
