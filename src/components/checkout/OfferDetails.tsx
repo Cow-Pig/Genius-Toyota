@@ -21,8 +21,10 @@ export function OfferDetails() {
 
     const { vehicleModelName, msrp, apr, termMonths } = offer;
 
-    // A simplified monthly payment calculation for display
-    const monthlyPayment = apr && termMonths ? (msrp / termMonths * (1 + (apr/100)/12)) : offer.monthlyPayment || 0;
+    const hasTerm = typeof termMonths === 'number' && termMonths > 0;
+    const monthlyPayment = hasTerm && apr
+        ? (msrp / termMonths) * (1 + (apr / 100) / 12)
+        : offer.monthlyPayment || 0;
     const dueAtSigning = offer.dueAtSigning || 0;
 
 
@@ -31,7 +33,7 @@ export function OfferDetails() {
             <CardHeader>
                 <CardTitle>Your Offer</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-4">
+            <CardContent className="grid gap-4 sm:grid-cols-2">
                 <div>
                     <p className="font-semibold">Vehicle:</p>
                     <p>{vehicleModelName}</p>
@@ -42,7 +44,10 @@ export function OfferDetails() {
                 </div>
                 <div>
                     <p className="font-semibold">Estimated Monthly Payment:</p>
-                    <p>{formatCurrency(monthlyPayment)}/mo for {termMonths} months</p>
+                    <p>
+                      {formatCurrency(monthlyPayment)}
+                      {hasTerm ? `/mo for ${termMonths} months` : '/mo'}
+                    </p>
                 </div>
                 <div>
                     <p className="font-semibold">Est. Due at Signing:</p>

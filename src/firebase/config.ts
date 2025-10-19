@@ -1,8 +1,9 @@
 export const firebaseConfig = {
-  "projectId": "studio-9888620032-da145",
-  "appId": "1:211802889793:web:cedc846d2e6c60410170c0",
-  "apiKey": "AIzaSyATdKbbqL8Z1caSb06-r2pCoNNd6_oVZxs",
-  "authDomain": "studio-9888620032-da145.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "211802889793"
+  apiKey: "AIzaSyBZNYGMf4D-76DHTcGT_9S_flZGsITaps0",
+  authDomain: "genius-toyota.firebaseapp.com",
+  projectId: "genius-toyota",
+  storageBucket: "genius-toyota.firebasestorage.app",
+  messagingSenderId: "525501976475",
+  appId: "1:525501976475:web:f72517be7755d10d745b3e",
+  measurementId: "G-D0ED503ECN",
 };

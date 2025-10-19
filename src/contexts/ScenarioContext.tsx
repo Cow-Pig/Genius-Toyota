@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import type { Scenario, Vehicle, SavedScenario, DrawerState } from '@/types';
 import { calculateLeasePayment, calculateLoanPayment } from '@/lib/calculations';
 import { getRatesForTier } from '@/lib/data';
@@ -16,6 +16,68 @@ const defaultScenario: Scenario = {
   annualMileage: 12000,
 };
 
+const createScenarioId = () => {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `scenario-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const normalizeSavedScenarios = (raw: unknown[]): SavedScenario[] => {
+  if (!Array.isArray(raw)) return [];
+
+  return raw
+    .map((entry, index) => {
+      if (!entry || typeof entry !== 'object') return null;
+
+      const record = entry as Partial<SavedScenario> & {
+        scenario?: Scenario;
+        vehicle?: Vehicle;
+        monthlyPayment?: number;
+        totalCost?: number;
+        dueAtSigning?: number;
+        termMonths?: number;
+        planType?: 'finance' | 'lease';
+        savedAt?: string;
+        id?: string;
+      };
+
+      if (!record.vehicle || !record.scenario) {
+        return null;
+      }
+
+      const planType = record.planType === 'lease' ? 'lease' : 'finance';
+      const monthlyPayment = typeof record.monthlyPayment === 'number' ? record.monthlyPayment : 0;
+      const leaseTerm = record.scenario.leaseTerm ?? defaultScenario.leaseTerm;
+      const financeTerm = record.scenario.financeTerm ?? defaultScenario.financeTerm;
+      const termMonths = typeof record.termMonths === 'number'
+        ? record.termMonths
+        : planType === 'lease'
+          ? leaseTerm
+          : financeTerm;
+
+      const calculatedTotal = monthlyPayment * termMonths;
+      const totalCost = typeof record.totalCost === 'number' ? record.totalCost : calculatedTotal;
+      const dueAtSigning = typeof record.dueAtSigning === 'number'
+        ? record.dueAtSigning
+        : (record.scenario.downPayment ?? defaultScenario.downPayment) + (record.scenario.tradeInValue ?? 0) + monthlyPayment;
+
+      return {
+        id: record.id ?? `legacy-${index}-${createScenarioId()}`,
+        planType,
+        scenario: record.scenario,
+        vehicle: record.vehicle,
+        monthlyPayment,
+        dueAtSigning,
+        totalCost,
+        termMonths,
+        savedAt: record.savedAt ?? new Date().toISOString(),
+      } satisfies SavedScenario;
+    })
+    .filter((value): value is SavedScenario => Boolean(value));
+};
+
 interface ScenarioContextValue {
   scenario: Scenario;
   updateScenario: (updates: Partial<Scenario>) => void;
@@ -24,8 +86,9 @@ interface ScenarioContextValue {
   activeVehicle: Vehicle | null;
   setActiveVehicle: (vehicle: Vehicle | null) => void;
   savedScenarios: SavedScenario[];
-  saveCurrentScenario: () => void;
-  removeScenario: (index: number) => void;
+  saveScenarioOption: (option: 'finance' | 'lease') => SavedScenario | null;
+  applySavedScenario: (id: string) => SavedScenario | null;
+  removeSavedScenario: (id: string) => void;
   drawerState: DrawerState;
   setDrawerState: (state: DrawerState) => void;
 }
@@ -47,7 +110,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       if (savedData) {
         const parsed = JSON.parse(savedData);
         setScenario(parsed.scenario || defaultScenario);
-        setSavedScenarios(parsed.savedScenarios || []);
+        setSavedScenarios(normalizeSavedScenarios(parsed.savedScenarios || []));
         setIsOnboarded(true); // User is considered onboarded if there's saved data.
       } else {
         setIsOnboarded(false); // No data, needs onboarding.
@@ -58,80 +121,164 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const persistState = useCallback((newState: any) => {
+  type PersistedState = { scenario: Scenario; savedScenarios: SavedScenario[] };
+
+  const persistState = useCallback((newState: PersistedState) => {
     try {
-        localStorage.setItem('financeNavigatorScenario', JSON.stringify(newState));
+      localStorage.setItem('financeNavigatorScenario', JSON.stringify(newState));
     } catch (error) {
-        console.error("Failed to save to localStorage", error);
+      console.error('Failed to save to localStorage', error);
     }
   }, []);
 
-  const debouncedPersist = useDebouncedCallback((newScenario, newSavedScenarios) => {
-    persistState({ scenario: newScenario, savedScenarios: newSavedScenarios });
-  }, 500);
+  const debouncedPersist = useDebouncedCallback(
+    (newScenario: Scenario, newSavedScenarios: SavedScenario[]) => {
+      persistState({ scenario: newScenario, savedScenarios: newSavedScenarios });
+    },
+    500,
+  );
 
-  const updateScenario = (updates: Partial<Scenario>) => {
-    setScenario(prev => {
+  const updateScenario = useCallback(
+    (updates: Partial<Scenario>) => {
+      setScenario((prev: Scenario) => {
         const newScenario = { ...prev, ...updates };
-        // Debounce the localStorage persistence
         debouncedPersist(newScenario, savedScenarios);
         return newScenario;
-    });
-  };
+      });
+    },
+    [debouncedPersist, savedScenarios],
+  );
 
-  const setOnboardingOpen = (open: boolean) => {
-    setIsOnboarded(!open);
-    if (!open) {
-        // If closing the modal, we assume they've completed it, so persist immediately.
+  const setOnboardingOpen = useCallback(
+    (open: boolean) => {
+      setIsOnboarded(!open);
+      if (!open) {
         persistState({ scenario, savedScenarios });
-    }
-  };
+      }
+    },
+    [persistState, scenario, savedScenarios],
+  );
 
-  const saveCurrentScenario = () => {
-    if (!activeVehicle || savedScenarios.length >= 3) return;
+  const saveScenarioOption = useCallback((option: 'finance' | 'lease'): SavedScenario | null => {
+    if (!activeVehicle) return null;
 
     const rates = getRatesForTier(scenario.creditScoreTier);
-    const financePayment = calculateLoanPayment(activeVehicle.msrp - scenario.downPayment, rates.financeApr, scenario.financeTerm);
-    
-    const newSavedScenario: SavedScenario = {
+
+    const { monthlyPayment, termMonths, dueAtSigning, totalCost } = (() => {
+      if (option === 'lease') {
+        const payment = calculateLeasePayment(
+          activeVehicle.msrp,
+          activeVehicle.residualValue,
+          scenario.leaseTerm,
+          rates.moneyFactor,
+        );
+        const term = scenario.leaseTerm;
+        return {
+          monthlyPayment: payment,
+          termMonths: term,
+          dueAtSigning: scenario.downPayment + scenario.tradeInValue + payment,
+          totalCost: payment * term + scenario.downPayment - scenario.tradeInValue,
+        };
+      }
+
+      const financePrincipal = Math.max(
+        activeVehicle.msrp - scenario.downPayment - scenario.tradeInValue,
+        0,
+      );
+      const payment = calculateLoanPayment(
+        financePrincipal,
+        rates.financeApr,
+        scenario.financeTerm,
+      );
+      const term = scenario.financeTerm;
+      return {
+        monthlyPayment: payment,
+        termMonths: term,
+        dueAtSigning: scenario.downPayment + scenario.tradeInValue + payment,
+        totalCost: payment * term + scenario.downPayment - scenario.tradeInValue,
+      };
+    })();
+
+    const savedScenario: SavedScenario = {
+      id: createScenarioId(),
+      planType: option,
       scenario: { ...scenario },
       vehicle: activeVehicle,
-      monthlyPayment: financePayment, 
+      monthlyPayment,
+      dueAtSigning,
+      totalCost,
+      termMonths,
+      savedAt: new Date().toISOString(),
     };
 
-    setSavedScenarios(prev => {
-        const newSaved = [...prev, newSavedScenario];
-        persistState({ scenario, savedScenarios: newSaved });
-        return newSaved;
+    setSavedScenarios((prev: SavedScenario[]) => {
+      const filtered = prev.filter(
+        (item) => !(item.planType === option && item.vehicle.id === activeVehicle.id),
+      );
+      const updated = [...filtered, savedScenario].slice(-6);
+      persistState({ scenario, savedScenarios: updated });
+      return updated;
     });
-  };
 
-  const removeScenario = (index: number) => {
-    setSavedScenarios(prev => {
-        const newSaved = prev.filter((_, i) => i !== index);
-        persistState({ scenario, savedScenarios: newSaved });
-        return newSaved;
-    });
-  };
+    return savedScenario;
+  }, [activeVehicle, persistState, scenario]);
 
+  const applySavedScenario = useCallback(
+    (id: string): SavedScenario | null => {
+      const match = savedScenarios.find((item) => item.id === id);
+      if (!match) {
+        return null;
+      }
 
-  return (
-    <ScenarioContext.Provider
-      value={{
-        scenario,
-        updateScenario,
-        isOnboarded,
-        setOnboardingOpen,
-        activeVehicle,
-        setActiveVehicle,
-        savedScenarios,
-        saveCurrentScenario,
-        removeScenario,
-        drawerState,
-        setDrawerState
-      }}
-    >
-      {children}
-    </ScenarioContext.Provider>
+      setScenario(match.scenario);
+      setActiveVehicle(match.vehicle);
+      setIsOnboarded(true);
+      persistState({ scenario: match.scenario, savedScenarios });
+      return match;
+    },
+    [persistState, savedScenarios, setActiveVehicle, setIsOnboarded],
   );
+
+  const removeSavedScenario = useCallback(
+    (id: string) => {
+      setSavedScenarios((prev) => {
+        const updated = prev.filter((item) => item.id !== id);
+        persistState({ scenario, savedScenarios: updated });
+        return updated;
+      });
+    },
+    [persistState, scenario],
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      scenario,
+      updateScenario,
+      isOnboarded,
+      setOnboardingOpen,
+      activeVehicle,
+      setActiveVehicle,
+      savedScenarios,
+      saveScenarioOption,
+      applySavedScenario,
+      removeSavedScenario,
+      drawerState,
+      setDrawerState,
+    }),
+    [
+      scenario,
+      updateScenario,
+      isOnboarded,
+      setOnboardingOpen,
+      activeVehicle,
+      savedScenarios,
+      saveScenarioOption,
+      applySavedScenario,
+      removeSavedScenario,
+      drawerState,
+      setDrawerState,
+    ],
+  );
+
+  return <ScenarioContext.Provider value={contextValue}>{children}</ScenarioContext.Provider>;
 }
