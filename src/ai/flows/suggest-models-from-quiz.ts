@@ -20,7 +20,7 @@ type QuizRequest = Omit<SuggestModelsFromQuizInput, 'availableVehicles'>;
 export async function suggestModelsFromQuiz(
   input: QuizRequest
 ): Promise<SuggestModelsFromQuizOutput> {
-  const availableVehicles = [
+  const baseAvailableVehicles = [
     {
       "model": "Corolla",
       "category": "Sedan",
@@ -177,6 +177,36 @@ export async function suggestModelsFromQuiz(
     }
   ];
 
+  const vehicleUrls: Record<string, string> = {
+    Corolla: 'https://placeholder.toyota.com/corolla',
+    'Corolla Hatchback': 'https://placeholder.toyota.com/corolla-hatchback',
+    Camry: 'https://placeholder.toyota.com/camry',
+    Crown: 'https://placeholder.toyota.com/crown',
+    Mirai: 'https://placeholder.toyota.com/mirai',
+    Prius: 'https://placeholder.toyota.com/prius',
+    'Prius Prime': 'https://placeholder.toyota.com/prius-prime',
+    GR86: 'https://placeholder.toyota.com/gr86',
+    'GR Supra': 'https://placeholder.toyota.com/gr-supra',
+    'GR Corolla': 'https://placeholder.toyota.com/gr-corolla',
+    'Corolla Cross': 'https://placeholder.toyota.com/corolla-cross',
+    RAV4: 'https://placeholder.toyota.com/rav4',
+    Venza: 'https://placeholder.toyota.com/venza',
+    Highlander: 'https://placeholder.toyota.com/highlander',
+    'Grand Highlander': 'https://placeholder.toyota.com/grand-highlander',
+    '4Runner': 'https://placeholder.toyota.com/4runner',
+    Sequoia: 'https://placeholder.toyota.com/sequoia',
+    'Land Cruiser': 'https://placeholder.toyota.com/land-cruiser',
+    bZ4X: 'https://placeholder.toyota.com/bz4x',
+    Tacoma: 'https://placeholder.toyota.com/tacoma',
+    Tundra: 'https://placeholder.toyota.com/tundra',
+    Sienna: 'https://placeholder.toyota.com/sienna',
+  };
+
+  const availableVehicles = baseAvailableVehicles.map((vehicle) => ({
+    ...vehicle,
+    url: vehicleUrls[vehicle.model] ?? 'https://placeholder.toyota.com/vehicle',
+  }));
+
   return suggestModelsFromQuizFlow({...input, availableVehicles});
 }
 
@@ -210,6 +240,20 @@ const suggestModelsFromQuizFlow = ai.defineFlow(
   },
   async (input) => {
     const { output } = await suggestModelsFromQuizPrompt(input);
-    return output!;
+
+    if (!output) {
+      return { recommendedModels: [] };
+    }
+
+    const vehicleUrlMap = new Map(
+      input.availableVehicles.map(({ model, url }) => [model, url])
+    );
+
+    const recommendedModels = output.recommendedModels.map((model) => ({
+      ...model,
+      photoUrl: vehicleUrlMap.get(model.modelName) ?? model.photoUrl,
+    }));
+
+    return { recommendedModels };
   }
 );
