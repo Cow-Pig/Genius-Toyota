@@ -89,10 +89,14 @@ function useQuotePreview(values: OfferFormValues) {
     }
 
     const principal = Math.max(msrp + (fees ?? 0) - (incentives ?? 0) - (dueAtSigning ?? 0), 0);
-    const payment = calculateLoanPayment(principal, (apr ?? 6) / 100, termMonths);
+    const aprValue =
+      typeof apr === 'number' && !Number.isNaN(apr) ? apr : Number(apr ?? 6);
+    const normalizedApr = Number.isFinite(aprValue) ? aprValue : 6;
+
+    const payment = calculateLoanPayment(principal, normalizedApr / 100, termMonths);
     return {
       payment,
-      narrative: `Payment reflects ${(apr ?? 6).toFixed(2)}% APR after ${formatCurrency(dueAtSigning ?? 0)} due at signing.`,
+      narrative: `Payment reflects ${normalizedApr.toFixed(2)}% APR after ${formatCurrency(dueAtSigning ?? 0)} due at signing.`,
     };
   }, [values]);
 }
