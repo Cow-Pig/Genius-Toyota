@@ -32,6 +32,8 @@ interface CheckoutState {
   totalAddonsPrice: number;
   totalAmount: number;
   amountDueAtSigning: number;
+  shopperEmail: string;
+  setShopperEmail: (email: string) => void;
 }
 
 const CheckoutContext = createContext<CheckoutState | undefined>(undefined);
@@ -73,6 +75,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
   const [tradeInValue] = useState<number>(mockTradeIn.estimate);
   const [availableAddons] = useState<Addon[]>(mockAddons);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [shopperEmail, setShopperEmail] = useState<string>(initialOffer?.shopperEmail ?? '');
 
   const toggleAddon = useCallback((id: string) => {
     setSelectedAddons((prev) =>
@@ -110,6 +113,8 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
       totalAddonsPrice,
       totalAmount,
       amountDueAtSigning,
+      shopperEmail,
+      setShopperEmail,
     }),
     [
       offer,
@@ -120,6 +125,7 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
       totalAddonsPrice,
       totalAmount,
       amountDueAtSigning,
+      shopperEmail,
     ],
   );
 

@@ -56,11 +56,6 @@ const offerSchema = z.object({
   mileageAllowance: z.coerce.number().optional(),
   offerDetails: z.string().optional(),
   validityHours: z.coerce.number().int().min(1, 'At least 1 hour').max(168, 'Keep offers under one week for demos.'),
-  shopperEmail: z
-    .string()
-    .email('Enter a valid email or leave blank.')
-    .optional()
-    .or(z.literal('')),
 });
 
 type OfferFormValues = z.infer<typeof offerSchema>;
@@ -141,7 +136,6 @@ export default function NewOfferPage() {
       mileageAllowance: 12000,
       offerDetails: '',
       validityHours: 48,
-      shopperEmail: '',
     },
   });
 
@@ -178,7 +172,6 @@ export default function NewOfferPage() {
       createdDate: serverTimestamp(),
       lastRevisedDate: serverTimestamp(),
       validUntil,
-      shopperEmail: data.shopperEmail || undefined,
       offerDetails: data.offerDetails,
       ...(data.offerType === 'loan' && { apr: data.apr }),
       ...(data.offerType === 'lease' && {
@@ -403,20 +396,6 @@ export default function NewOfferPage() {
                         <Input type="number" placeholder="48" {...field} />
                       </FormControl>
                       <FormDescription>Controls when the offer auto-expires in the shopper portal.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  name="shopperEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Optional Shopper Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="jamie@example.com" {...field} />
-                      </FormControl>
-                      <FormDescription>We pre-fill this when you push to the shopper inbox later.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
