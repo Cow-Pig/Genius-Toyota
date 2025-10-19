@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -22,6 +22,11 @@ import { formatCurrency } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { MessageSquare, Send } from 'lucide-react';
+import {
+  loadPersistedNegotiationMessages,
+  persistNegotiationMessages,
+  type PersistedNegotiationMessage,
+} from '@/lib/negotiation-storage';
 
 interface NegotiationThreadProps {
   offer: FinancialOffer;
@@ -37,14 +42,97 @@ interface CounterPreset {
   };
 }
 
-function formatDate(value?: Date | Timestamp | { seconds: number; nanoseconds?: number }) {
+function formatDate(
+  value?: Date | Timestamp | { seconds: number; nanoseconds?: number } | string,
+) {
   if (!value) return '—';
   if (value instanceof Date) return value.toLocaleString();
   if (value instanceof Timestamp) return value.toDate().toLocaleString();
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '—';
+    }
+
+    return parsed.toLocaleString();
+  }
   if (typeof value === 'object' && 'seconds' in value) {
     return new Date(value.seconds * 1000).toLocaleString();
   }
   return '—';
+}
+
+function buildLocalMessageId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function sanitizeCounterProposalPayload(
+  payload?: NegotiationMessage['counterProposal'] | null,
+): PersistedNegotiationMessage['counterProposal'] {
+  if (!payload) {
+    return null;
+  }
+
+  const sanitized: PersistedNegotiationMessage['counterProposal'] = {
+    termMonths:
+      typeof payload.termMonths === 'number' && Number.isFinite(payload.termMonths)
+        ? Math.round(payload.termMonths)
+        : null,
+    mileageAllowance:
+      typeof payload.mileageAllowance === 'number' && Number.isFinite(payload.mileageAllowance)
+        ? Math.round(payload.mileageAllowance)
+        : null,
+    downPayment:
+      typeof payload.downPayment === 'number' && Number.isFinite(payload.downPayment)
+        ? Number(payload.downPayment)
+        : null,
+    estimatedPayment:
+      typeof payload.estimatedPayment === 'number' && Number.isFinite(payload.estimatedPayment)
+        ? Number(payload.estimatedPayment)
+        : null,
+  };
+
+  const hasValue = Object.values(sanitized).some((value) => value !== null);
+  return hasValue ? sanitized : null;
+}
+
+function normalizeMessage(
+  input: NegotiationMessage,
+  fallbackThreadId: string,
+  authorRole: 'dealer' | 'customer',
+): PersistedNegotiationMessage {
+  const createdAt = (() => {
+    const raw = input.createdAt;
+    if (!raw) return new Date().toISOString();
+    if (raw instanceof Timestamp) return raw.toDate().toISOString();
+    if (raw instanceof Date) return raw.toISOString();
+    if (typeof raw === 'string') {
+      const parsed = new Date(raw);
+      return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+    }
+    if (typeof raw === 'object' && 'seconds' in raw) {
+      return new Date(raw.seconds * 1000).toISOString();
+    }
+    return new Date().toISOString();
+  })();
+
+  const counterProposal = sanitizeCounterProposalPayload(input.counterProposal);
+
+  return {
+    id: input.id ?? buildLocalMessageId(),
+    negotiationThreadId: input.negotiationThreadId ?? fallbackThreadId,
+    authorId: input.authorId,
+    authorRole: input.authorRole ?? authorRole,
+    content: input.content,
+    reasonCode: input.reasonCode ?? null,
+    counterProposal,
+    createdAt,
+    isLocalOnly: false,
+  };
 }
 
 function getInitials(name: string) {
@@ -113,6 +201,19 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [customerId, setCustomerId] = useState<string>(() => `guest-${offer.id}`);
+  const [localMessages, setLocalMessages] = useState<PersistedNegotiationMessage[]>(() =>
+    loadPersistedNegotiationMessages(offer.id),
+  );
+  const latestLocalMessagesRef = useRef(localMessages);
+  const syncedSnapshotSignatureRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    latestLocalMessagesRef.current = localMessages;
+  }, [localMessages]);
+
+  useEffect(() => {
+    syncedSnapshotSignatureRef.current = null;
+  }, [offer.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -133,6 +234,10 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
 
     window.localStorage.setItem(storageKey, generated);
     setCustomerId(generated);
+  }, [offer.id]);
+
+  useEffect(() => {
+    setLocalMessages(loadPersistedNegotiationMessages(offer.id));
   }, [offer.id]);
 
   const threadRef = useMemoFirebase(() => {
@@ -158,6 +263,39 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
     return user?.uid ?? customerId;
   })();
 
+  useEffect(() => {
+    if (!messages) return;
+
+    const normalized = messages.map((msg) => normalizeMessage(msg, offer.id, authorRole));
+    const normalizedSignature = JSON.stringify(
+      normalized.map((entry) => ({
+        id: entry.id,
+        authorId: entry.authorId,
+        authorRole: entry.authorRole,
+        content: entry.content,
+        reasonCode: entry.reasonCode,
+        counterProposal: entry.counterProposal,
+        createdAt: entry.createdAt,
+      })),
+    );
+
+    if (syncedSnapshotSignatureRef.current === normalizedSignature) {
+      return;
+    }
+
+    syncedSnapshotSignatureRef.current = normalizedSignature;
+
+    if (normalized.length === 0 && latestLocalMessagesRef.current.some((entry) => entry.isLocalOnly)) {
+      return;
+    }
+
+    setLocalMessages(normalized);
+  }, [messages, offer.id, authorRole]);
+
+  useEffect(() => {
+    persistNegotiationMessages(offer.id, localMessages);
+  }, [offer.id, localMessages]);
+
   const ensureThreadMetadata = () => {
     if (!threadRef || !firestore) return;
     const basePayload: Record<string, unknown> = {
@@ -176,12 +314,35 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
   };
 
   const handleSendMessage = async (
-    content: string,
+    rawContent: string,
     reasonCode: NegotiationReasonCode = 'CUSTOM',
     counterProposal?: NegotiationMessage['counterProposal'],
   ) => {
-    if (!threadRef || !firestore) return;
+    const content = rawContent.trim();
+    if (!content) return;
     if (!resolvedAuthorId) return;
+
+    const counterProposalPayload = sanitizeCounterProposalPayload(counterProposal);
+
+    const localEntry: PersistedNegotiationMessage = {
+      id: buildLocalMessageId(),
+      negotiationThreadId: offer.id,
+      authorId: resolvedAuthorId,
+      authorRole,
+      content,
+      reasonCode,
+      counterProposal: counterProposalPayload,
+      createdAt: new Date().toISOString(),
+      isLocalOnly: !threadRef || !firestore,
+    };
+
+    setLocalMessages((prev) => [...prev, localEntry]);
+    setMessage('');
+
+    if (!threadRef || !firestore) {
+      return;
+    }
+
     ensureThreadMetadata();
     setIsSending(true);
     try {
@@ -191,14 +352,13 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
         authorRole,
         content,
         reasonCode,
-        counterProposal,
+        counterProposal: counterProposalPayload,
         createdAt: serverTimestamp(),
       });
       updateDocumentNonBlocking(threadRef, {
         lastMessagePreview: content.slice(0, 140),
         updatedAt: serverTimestamp(),
       });
-      setMessage('');
     } finally {
       setIsSending(false);
     }
@@ -279,8 +439,8 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
         <Separator />
         <ScrollArea className="h-80 rounded-md border bg-muted/30 p-4">
           <div className="space-y-4">
-            {messages && messages.length > 0 ? (
-              messages.map((msg) => (
+            {localMessages.length > 0 ? (
+              localMessages.map((msg) => (
                 <div key={msg.id} className="rounded-lg bg-background p-4 shadow-sm">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <div className="flex items-center gap-2">
@@ -292,27 +452,27 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
                     </div>
                     {msg.reasonCode && <Badge variant="secondary">{msg.reasonCode}</Badge>}
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{msg.content}</p>
                   {msg.counterProposal && (
                     <div className="mt-3 grid gap-2 rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground md:grid-cols-2">
-                      {msg.counterProposal.termMonths && (
+                      {msg.counterProposal.termMonths !== null && (
                         <div>
                           <span className="font-semibold text-foreground">Term:</span> {msg.counterProposal.termMonths} months
                         </div>
                       )}
-                      {msg.counterProposal.mileageAllowance && (
+                      {msg.counterProposal.mileageAllowance !== null && (
                         <div>
                           <span className="font-semibold text-foreground">Mileage:</span>{' '}
                           {msg.counterProposal.mileageAllowance.toLocaleString()} mi/year
                         </div>
                       )}
-                      {msg.counterProposal.downPayment !== undefined && (
+                      {msg.counterProposal.downPayment !== null && (
                         <div>
                           <span className="font-semibold text-foreground">Due at signing:</span>{' '}
                           {formatCurrency(msg.counterProposal.downPayment ?? 0)}
                         </div>
                       )}
-                      {msg.counterProposal.estimatedPayment !== undefined && (
+                      {msg.counterProposal.estimatedPayment !== null && (
                         <div>
                           <span className="font-semibold text-foreground">Estimated payment:</span>{' '}
                           {formatCurrency(msg.counterProposal.estimatedPayment ?? 0)}/mo
