@@ -1,0 +1,31 @@
+{
+  "inventory": [
+    {
+      "id": "inv-corolla-se",
+      "vehicleId": "corolla",
+      "vin": "JTDBAMDE0RJ123456",
+      "color": "Blueprint",
+      "msrp": 25210,
+      "packages": ["Premium Audio", "All-Weather Mats"],
+      "available": true
+    },
+    {
+      "id": "inv-rav4-xse",
+      "vehicleId": "rav4-hybrid",
+      "vin": "2T3Y6RFV0RW987654",
+      "color": "Magnetic Gray", 
+      "msrp": 35485,
+      "packages": ["Weather Package", "Digital Rearview"],
+      "available": false
+    },
+    {
+      "id": "inv-highlander-limited",
+      "vehicleId": "highlander",
+      "vin": "5TDEBRCH7RS135791",
+      "color": "Wind Chill Pearl",
+      "msrp": 46890,
+      "packages": ["Platinum Technology", "Rear Seat Entertainment"],
+      "available": true
+    }
+  ]
+}

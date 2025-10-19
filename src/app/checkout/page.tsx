@@ -8,6 +8,7 @@ import { PaymentForm } from '@/components/checkout/PaymentForm';
 import { SchedulingForm } from '@/components/checkout/SchedulingForm';
 import { OfferDetails } from '@/components/checkout/OfferDetails';
 import { TotalsCard } from '@/components/checkout/TotalsCard';
+import { IncomeVerificationFlow } from '@/components/checkout/IncomeVerificationFlow';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -24,6 +25,8 @@ export default function CheckoutPage() {
       <h1 className="mb-8 text-4xl font-bold tracking-tight">Checkout</h1>
       <div className="space-y-8">
         <OfferDetails />
+
+        <IncomeVerificationFlow />
 
         <TradeInForm />
 

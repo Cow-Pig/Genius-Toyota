@@ -15,8 +15,10 @@ import {
 } from '@/types/quiz';
 
 
+type QuizRequest = Omit<SuggestModelsFromQuizInput, 'availableVehicles'>;
+
 export async function suggestModelsFromQuiz(
-  input: SuggestModelsFromQuizInput
+  input: QuizRequest
 ): Promise<SuggestModelsFromQuizOutput> {
   const availableVehicles = [
     {

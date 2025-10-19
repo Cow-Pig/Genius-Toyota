@@ -8,6 +8,23 @@ import { formatCurrency } from '@/lib/utils';
 export function TotalsCard() {
   const { totalAmount, amountDueAtSigning, tradeInValue, totalAddonsPrice, offer } = useCheckout();
 
+  if (!offer) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Deal Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Select an offer to see the payment summary and due-at-signing details.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const msrp = offer.msrp ?? 0;
+
   return (
     <Card>
       <CardHeader>
@@ -16,7 +33,7 @@ export function TotalsCard() {
       <CardContent className="space-y-4">
         <div className="flex justify-between">
           <p>Vehicle MSRP</p>
-          <p>{formatCurrency(offer.msrp)}</p>
+          <p>{formatCurrency(msrp)}</p>
         </div>
         <div className="flex justify-between">
           <p>F&I Add-ons</p>

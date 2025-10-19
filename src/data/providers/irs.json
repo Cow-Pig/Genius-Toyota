@@ -1,0 +1,28 @@
+{
+  "transcripts": [
+    {
+      "id": "irs-2023-w2",
+      "year": 2023,
+      "type": "Wage & Income",
+      "employer": "Horizon Robotics",
+      "totalIncome": 128400,
+      "pdfUrl": "/mock-pdfs/irs/2023-wage-income.pdf"
+    },
+    {
+      "id": "irs-2022-w2",
+      "year": 2022,
+      "type": "Wage & Income",
+      "employer": "Horizon Robotics",
+      "totalIncome": 121950,
+      "pdfUrl": "/mock-pdfs/irs/2022-wage-income.pdf"
+    },
+    {
+      "id": "irs-2023-return",
+      "year": 2023,
+      "type": "Return Transcript",
+      "employer": "Horizon Robotics",
+      "totalIncome": 129200,
+      "pdfUrl": "/mock-pdfs/irs/2023-return.pdf"
+    }
+  ]
+}

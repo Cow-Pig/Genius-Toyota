@@ -1,0 +1,71 @@
+{
+  "accounts": [
+    {
+      "id": "acc-001",
+      "mask": "4321",
+      "name": "Everyday Checking",
+      "institution": "Mock National Bank",
+      "currentBalance": 4821.32,
+      "availableBalance": 4700.5,
+      "lastUpdated": "2024-08-12T15:04:00Z",
+      "transactions": [
+        {
+          "id": "txn-1001",
+          "date": "2024-08-09",
+          "description": "Direct Deposit - Horizon Robotics",
+          "amount": 3625.75,
+          "type": "credit",
+          "employerMatch": true
+        },
+        {
+          "id": "txn-1002",
+          "date": "2024-08-08",
+          "description": "Electric Utility",
+          "amount": -142.18,
+          "type": "debit"
+        },
+        {
+          "id": "txn-1003",
+          "date": "2024-08-01",
+          "description": "Direct Deposit - Horizon Robotics",
+          "amount": 3625.75,
+          "type": "credit",
+          "employerMatch": true
+        },
+        {
+          "id": "txn-1004",
+          "date": "2024-07-25",
+          "description": "Rent Payment",
+          "amount": -2150.0,
+          "type": "debit"
+        }
+      ]
+    },
+    {
+      "id": "acc-002",
+      "mask": "7788",
+      "name": "High-Yield Savings",
+      "institution": "Mock National Bank",
+      "currentBalance": 12500.0,
+      "availableBalance": 12500.0,
+      "lastUpdated": "2024-08-10T12:00:00Z",
+      "transactions": [
+        {
+          "id": "txn-2001",
+          "date": "2024-07-31",
+          "description": "Transfer from Checking",
+          "amount": 1500.0,
+          "type": "credit"
+        }
+      ]
+    }
+  ],
+  "heuristics": [
+    "Employer name matches bank deposits for the last 90 days.",
+    "Monthly income average aligns with stated salary range.",
+    "No NSF or overdraft fees detected in review window."
+  ],
+  "flaggedDeposits": [
+    "txn-2001"
+  ]
+}

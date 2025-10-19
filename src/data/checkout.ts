@@ -6,6 +6,7 @@ import type { FinancialOffer } from '@/types';
 export const mockOffer: FinancialOffer = {
   id: 'offer-b7c5a1',
   dealerId: 'dealer-01HQSZ7J3G8S7X6R0J3E6Q2Z9W',
+  vehicleId: 'camry',
   vehicleModelName: 'Toyota Camry XSE',
   offerType: 'loan',
   msrp: 34500,
