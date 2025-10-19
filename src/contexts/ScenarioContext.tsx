@@ -58,7 +58,9 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const persistState = useCallback((newState: any) => {
+  type PersistedState = { scenario: Scenario; savedScenarios: SavedScenario[] };
+
+  const persistState = useCallback((newState: PersistedState) => {
     try {
         localStorage.setItem('financeNavigatorScenario', JSON.stringify(newState));
     } catch (error) {
@@ -66,12 +68,15 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const debouncedPersist = useDebouncedCallback((newScenario, newSavedScenarios) => {
-    persistState({ scenario: newScenario, savedScenarios: newSavedScenarios });
-  }, 500);
+  const debouncedPersist = useDebouncedCallback(
+    (newScenario: Scenario, newSavedScenarios: SavedScenario[]) => {
+      persistState({ scenario: newScenario, savedScenarios: newSavedScenarios });
+    },
+    500,
+  );
 
   const updateScenario = (updates: Partial<Scenario>) => {
-    setScenario(prev => {
+    setScenario((prev: Scenario) => {
         const newScenario = { ...prev, ...updates };
         // Debounce the localStorage persistence
         debouncedPersist(newScenario, savedScenarios);
@@ -99,7 +104,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
       monthlyPayment: financePayment, 
     };
 
-    setSavedScenarios(prev => {
+    setSavedScenarios((prev: SavedScenario[]) => {
         const newSaved = [...prev, newSavedScenario];
         persistState({ scenario, savedScenarios: newSaved });
         return newSaved;
@@ -107,7 +112,7 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
   };
 
   const removeScenario = (index: number) => {
-    setSavedScenarios(prev => {
+    setSavedScenarios((prev: SavedScenario[]) => {
         const newSaved = prev.filter((_, i) => i !== index);
         persistState({ scenario, savedScenarios: newSaved });
         return newSaved;

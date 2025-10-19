@@ -31,9 +31,9 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useDoc, useFirebase, useMemoFirebase } from '@/firebase';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { FinancialOffer, OfferStatus, OfferType } from '@/types';
+import { FinancialOffer } from '@/types';
 import { vehicleData } from '@/lib/data';
 import { Header } from '@/components/dealer/Header';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -89,18 +89,24 @@ export default function EditOfferPage() {
 
   useEffect(() => {
     if (offer) {
-      // Ensure user has permission
       if (offer.dealerId !== user?.uid) {
         toast({ variant: 'destructive', title: 'Permission Denied' });
         router.replace('/dealer/dashboard');
         return;
       }
+
       form.reset({
-        ...offer,
-        apr: offer.apr || 0,
-        moneyFactor: offer.moneyFactor || 0,
-        residualPercentage: offer.residualPercentage || 0,
-        offerDetails: offer.offerDetails || '',
+        vehicleId: offer.vehicleId || '',
+        offerType: offer.offerType === 'lease' ? 'lease' : 'loan',
+        status: offer.status === 'published' ? 'published' : 'draft',
+        msrp: offer.msrp,
+        termMonths: offer.termMonths,
+        incentives: offer.incentives ?? 0,
+        fees: offer.fees ?? 0,
+        apr: offer.apr ?? 0,
+        moneyFactor: offer.moneyFactor ?? 0,
+        residualPercentage: offer.residualPercentage ?? 0,
+        offerDetails: offer.offerDetails ?? '',
       });
     }
   }, [offer, form, user, router, toast]);

@@ -3,12 +3,13 @@
 import { useUser } from '@/firebase';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
+import type { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { UserProfile } from '@/types';
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const pathname = usePathname();

@@ -17,7 +17,8 @@ import { ToyotaLogo } from '../icons/ToyotaLogo';
 import { QuizQuestionCard } from './QuizQuestionCard';
 import { QuizResults } from './QuizResults';
 
-type QuizAnswers = Partial<Omit<SuggestModelsFromQuizInput, 'availableVehicles'>>;
+type QuizRequest = Omit<SuggestModelsFromQuizInput, 'availableVehicles'>;
+type QuizAnswers = Partial<QuizRequest>;
 
 const questions = [
   {
@@ -94,10 +95,13 @@ export function ModelMatchQuiz() {
   const handleSubmit = async () => {
     setIsLoading(true);
     try {
-        const finalAnswers = {
-            ...answers,
-            priorities: answers.priorities || [] // Ensure priorities is an array
-        } as Omit<SuggestModelsFromQuizInput, 'availableVehicles'>;
+        const finalAnswers: QuizRequest = {
+            passengers: (answers.passengers as string) || '',
+            primaryUse: (answers.primaryUse as string) || '',
+            commute: (answers.commute as string) || '',
+            fuelPreference: (answers.fuelPreference as string) || '',
+            priorities: (answers.priorities as string[]) || [],
+        };
 
       const res = await suggestModelsFromQuiz(finalAnswers);
       setResults(res);
