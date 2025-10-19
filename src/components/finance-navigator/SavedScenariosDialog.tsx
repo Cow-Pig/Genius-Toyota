@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,18 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { useScenario } from '@/hooks/use-scenario';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarClock, BookmarkCheck, BookmarkX } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface SavedScenariosDialogProps {
   open: boolean;
@@ -26,6 +34,7 @@ interface SavedScenariosDialogProps {
 export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialogProps) {
   const { savedScenarios, applySavedScenario, removeSavedScenario } = useScenario();
   const { toast } = useToast();
+  const [selectedScenarioIds, setSelectedScenarioIds] = useState<string[]>([]);
 
   const formatter = useMemo(
     () =>
@@ -43,6 +52,38 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
       ),
     [savedScenarios],
   );
+
+  useEffect(() => {
+    setSelectedScenarioIds((prev) =>
+      prev.filter((id) => savedScenarios.some((scenario) => scenario.id === id)),
+    );
+  }, [savedScenarios]);
+
+  const selectedScenarios = useMemo(
+    () =>
+      selectedScenarioIds
+        .map((id) => savedScenarios.find((scenario) => scenario.id === id))
+        .filter((value): value is typeof savedScenarios[number] => Boolean(value)),
+    [selectedScenarioIds, savedScenarios],
+  );
+
+  const toggleScenarioSelection = (id: string) => {
+    setSelectedScenarioIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((existingId) => existingId !== id);
+      }
+
+      if (prev.length >= 3) {
+        toast({
+          title: 'Comparison limit reached',
+          description: 'Select up to three scenarios to compare side-by-side.',
+        });
+        return prev;
+      }
+
+      return [...prev, id];
+    });
+  };
 
   const handleApply = (id: string) => {
     const applied = applySavedScenario(id);
@@ -90,8 +131,16 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
         ) : (
           <ScrollArea className="max-h-[60vh] pr-2">
             <div className="space-y-4">
-              {sortedScenarios.map((item) => (
-                <Card key={item.id} className="shadow-sm">
+              {sortedScenarios.map((item) => {
+                const isSelected = selectedScenarioIds.includes(item.id);
+                return (
+                  <Card
+                    key={item.id}
+                    className={cn(
+                      'shadow-sm transition',
+                      isSelected && 'ring-2 ring-primary/50',
+                    )}
+                  >
                   <CardHeader className="gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
@@ -109,6 +158,13 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                       </CardDescription>
                     </div>
                     <div className="flex gap-2">
+                      <Button
+                        variant={isSelected ? 'secondary' : 'outline'}
+                        onClick={() => toggleScenarioSelection(item.id)}
+                        className="font-medium"
+                      >
+                        {isSelected ? 'Selected' : 'Compare'}
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleRemove(item.id)} aria-label="Remove scenario">
                         <BookmarkX className="h-4 w-4" />
                       </Button>
@@ -143,9 +199,102 @@ export function SavedScenariosDialog({ open, onOpenChange }: SavedScenariosDialo
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
+        )}
+        {selectedScenarios.length >= 2 && (
+          <div className="mt-6 space-y-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="font-headline text-xl">Compare selected scenarios</h3>
+                <p className="text-sm text-muted-foreground">
+                  Review the highlights of each option side-by-side before deciding which one to load.
+                </p>
+              </div>
+              <Button variant="ghost" onClick={() => setSelectedScenarioIds([])} className="self-start sm:self-auto">
+                Clear selection
+              </Button>
+            </div>
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-40">Metric</TableHead>
+                    {selectedScenarios.map((scenario) => (
+                      <TableHead key={scenario.id} className="min-w-[160px]">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-semibold">{scenario.vehicle.modelName}</span>
+                          <Badge variant={scenario.planType === 'finance' ? 'default' : 'secondary'} className="w-max uppercase">
+                            {scenario.planType === 'finance' ? 'Finance' : 'Lease'}
+                          </Badge>
+                        </div>
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="font-medium">Monthly payment</TableCell>
+                    {selectedScenarios.map((scenario) => (
+                      <TableCell key={`${scenario.id}-monthly`} className="font-semibold">
+                        {formatCurrency(scenario.monthlyPayment)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Due at signing</TableCell>
+                    {selectedScenarios.map((scenario) => (
+                      <TableCell key={`${scenario.id}-due`}>
+                        {formatCurrency(scenario.dueAtSigning)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Term length</TableCell>
+                    {selectedScenarios.map((scenario) => (
+                      <TableCell key={`${scenario.id}-term`}>
+                        {scenario.termMonths} months
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Total paid</TableCell>
+                    {selectedScenarios.map((scenario) => (
+                      <TableCell key={`${scenario.id}-total`}>
+                        {formatCurrency(scenario.totalCost)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Down + trade equity</TableCell>
+                    {selectedScenarios.map((scenario) => (
+                      <TableCell key={`${scenario.id}-down`}>
+                        {formatCurrency(scenario.scenario.downPayment + scenario.scenario.tradeInValue)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Credit tier</TableCell>
+                    {selectedScenarios.map((scenario) => (
+                      <TableCell key={`${scenario.id}-tier`}>
+                        {scenario.scenario.creditScoreTier}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                  <TableRow>
+                    <TableCell className="font-medium">Saved on</TableCell>
+                    {selectedScenarios.map((scenario) => (
+                      <TableCell key={`${scenario.id}-saved`}>
+                        {formatter.format(new Date(scenario.savedAt))}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         )}
       </DialogContent>
     </Dialog>
