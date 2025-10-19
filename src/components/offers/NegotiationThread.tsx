@@ -92,12 +92,12 @@ function normalizeMessage(
 
   const counterProposal = input.counterProposal
     ? {
-        termMonths: input.counterProposal.termMonths,
-        mileageAllowance: input.counterProposal.mileageAllowance,
-        downPayment: input.counterProposal.downPayment,
-        estimatedPayment: input.counterProposal.estimatedPayment,
+        termMonths: input.counterProposal.termMonths ?? null,
+        mileageAllowance: input.counterProposal.mileageAllowance ?? null,
+        downPayment: input.counterProposal.downPayment ?? null,
+        estimatedPayment: input.counterProposal.estimatedPayment ?? null,
       }
-    : undefined;
+    : null;
 
   return {
     id: input.id ?? buildLocalMessageId(),
@@ -105,9 +105,10 @@ function normalizeMessage(
     authorId: input.authorId,
     authorRole: input.authorRole ?? authorRole,
     content: input.content,
-    reasonCode: input.reasonCode,
+    reasonCode: input.reasonCode ?? null,
     counterProposal,
     createdAt,
+    isLocalOnly: false,
   };
 }
 
@@ -252,8 +253,8 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
           return true;
         }
 
-        const currentCounter = current.counterProposal ?? {};
-        const nextCounter = entry.counterProposal ?? {};
+        const currentCounter = current.counterProposal ?? null;
+        const nextCounter = entry.counterProposal ?? null;
         return JSON.stringify(currentCounter) !== JSON.stringify(nextCounter);
       });
 
@@ -294,6 +295,15 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
     if (!content) return;
     if (!resolvedAuthorId) return;
 
+    const counterProposalPayload = counterProposal
+      ? {
+          termMonths: counterProposal.termMonths ?? null,
+          mileageAllowance: counterProposal.mileageAllowance ?? null,
+          downPayment: counterProposal.downPayment ?? null,
+          estimatedPayment: counterProposal.estimatedPayment ?? null,
+        }
+      : null;
+
     const localEntry: PersistedNegotiationMessage = {
       id: buildLocalMessageId(),
       negotiationThreadId: offer.id,
@@ -301,14 +311,7 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
       authorRole,
       content,
       reasonCode,
-      counterProposal: counterProposal
-        ? {
-            termMonths: counterProposal.termMonths,
-            mileageAllowance: counterProposal.mileageAllowance,
-            downPayment: counterProposal.downPayment,
-            estimatedPayment: counterProposal.estimatedPayment,
-          }
-        : undefined,
+      counterProposal: counterProposalPayload,
       createdAt: new Date().toISOString(),
       isLocalOnly: !threadRef || !firestore,
     };
@@ -329,7 +332,7 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
         authorRole,
         content,
         reasonCode,
-        counterProposal,
+        counterProposal: counterProposalPayload,
         createdAt: serverTimestamp(),
       });
       updateDocumentNonBlocking(threadRef, {
@@ -432,24 +435,24 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
                   <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{msg.content}</p>
                   {msg.counterProposal && (
                     <div className="mt-3 grid gap-2 rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground md:grid-cols-2">
-                      {msg.counterProposal.termMonths && (
+                      {msg.counterProposal.termMonths !== null && (
                         <div>
                           <span className="font-semibold text-foreground">Term:</span> {msg.counterProposal.termMonths} months
                         </div>
                       )}
-                      {msg.counterProposal.mileageAllowance && (
+                      {msg.counterProposal.mileageAllowance !== null && (
                         <div>
                           <span className="font-semibold text-foreground">Mileage:</span>{' '}
                           {msg.counterProposal.mileageAllowance.toLocaleString()} mi/year
                         </div>
                       )}
-                      {msg.counterProposal.downPayment !== undefined && (
+                      {msg.counterProposal.downPayment !== null && (
                         <div>
                           <span className="font-semibold text-foreground">Due at signing:</span>{' '}
                           {formatCurrency(msg.counterProposal.downPayment ?? 0)}
                         </div>
                       )}
-                      {msg.counterProposal.estimatedPayment !== undefined && (
+                      {msg.counterProposal.estimatedPayment !== null && (
                         <div>
                           <span className="font-semibold text-foreground">Estimated payment:</span>{' '}
                           {formatCurrency(msg.counterProposal.estimatedPayment ?? 0)}/mo

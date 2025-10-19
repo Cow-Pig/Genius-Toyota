@@ -1,17 +1,20 @@
 import type { NegotiationMessage, NegotiationReasonCode } from '@/types';
 
 type PersistedCounterProposal = {
-  termMonths?: number;
-  mileageAllowance?: number;
-  downPayment?: number;
-  estimatedPayment?: number;
+  termMonths: number | null;
+  mileageAllowance: number | null;
+  downPayment: number | null;
+  estimatedPayment: number | null;
 };
 
-export type PersistedNegotiationMessage = Omit<NegotiationMessage, 'createdAt' | 'reasonCode' | 'counterProposal'> & {
+export type PersistedNegotiationMessage = Omit<
+  NegotiationMessage,
+  'createdAt' | 'reasonCode' | 'counterProposal'
+> & {
   id: string;
   createdAt: string;
-  reasonCode?: NegotiationReasonCode;
-  counterProposal?: PersistedCounterProposal;
+  reasonCode: NegotiationReasonCode | null;
+  counterProposal: PersistedCounterProposal | null;
   isLocalOnly?: boolean;
 };
 
@@ -21,31 +24,42 @@ function isValidAuthorRole(value: unknown): value is 'dealer' | 'customer' {
   return value === 'dealer' || value === 'customer';
 }
 
-function sanitizeCounterProposal(value: unknown): PersistedCounterProposal | undefined {
+function sanitizeCounterProposal(value: unknown): PersistedCounterProposal | null {
   if (!value || typeof value !== 'object') {
-    return undefined;
+    return null;
   }
 
   const record = value as Record<string, unknown>;
-  const sanitized: PersistedCounterProposal = {};
+  const sanitized: PersistedCounterProposal = {
+    termMonths: null,
+    mileageAllowance: null,
+    downPayment: null,
+    estimatedPayment: null,
+  };
+
+  let hasValue = false;
 
   if (typeof record.termMonths === 'number' && Number.isFinite(record.termMonths)) {
     sanitized.termMonths = Math.round(record.termMonths);
+    hasValue = true;
   }
 
   if (typeof record.mileageAllowance === 'number' && Number.isFinite(record.mileageAllowance)) {
     sanitized.mileageAllowance = Math.round(record.mileageAllowance);
+    hasValue = true;
   }
 
   if (typeof record.downPayment === 'number' && Number.isFinite(record.downPayment)) {
     sanitized.downPayment = Number(record.downPayment);
+    hasValue = true;
   }
 
   if (typeof record.estimatedPayment === 'number' && Number.isFinite(record.estimatedPayment)) {
     sanitized.estimatedPayment = Number(record.estimatedPayment);
+    hasValue = true;
   }
 
-  return Object.keys(sanitized).length > 0 ? sanitized : undefined;
+  return hasValue ? sanitized : null;
 }
 
 function sanitizeNegotiationMessage(value: unknown): PersistedNegotiationMessage | null {
@@ -71,6 +85,11 @@ function sanitizeNegotiationMessage(value: unknown): PersistedNegotiationMessage
     return null;
   }
 
+  const reasonCode =
+    typeof record.reasonCode === 'string' ? (record.reasonCode as NegotiationReasonCode) : null;
+
+  const counterProposal = sanitizeCounterProposal(record.counterProposal);
+
   const result: PersistedNegotiationMessage = {
     id,
     negotiationThreadId,
@@ -78,20 +97,10 @@ function sanitizeNegotiationMessage(value: unknown): PersistedNegotiationMessage
     authorRole,
     content,
     createdAt: parsedDate.toISOString(),
+    reasonCode,
+    counterProposal,
+    isLocalOnly: Boolean(record.isLocalOnly),
   };
-
-  if (typeof record.reasonCode === 'string') {
-    result.reasonCode = record.reasonCode as NegotiationReasonCode;
-  }
-
-  const counterProposal = sanitizeCounterProposal(record.counterProposal);
-  if (counterProposal) {
-    result.counterProposal = counterProposal;
-  }
-
-  if (typeof record.isLocalOnly === 'boolean') {
-    result.isLocalOnly = record.isLocalOnly;
-  }
 
   return result;
 }
