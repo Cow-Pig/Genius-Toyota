@@ -15,14 +15,79 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import { useCheckout } from '@/components/checkout/CheckoutProvider';
+import { useFirebase } from '@/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import type { OfferPurchase } from '@/types';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [isNavigating, startNavigate] = useTransition();
+  const { firestore } = useFirebase();
+  const {
+    offer,
+    selectedAddonDetails,
+    totalAmount,
+    amountDueAtSigning,
+    tradeInValue,
+    prequalSubmission,
+    paymentContact,
+    appointment,
+  } = useCheckout();
+
+  const recordPurchase = async () => {
+    if (!firestore || !offer) {
+      return;
+    }
+
+    const customerEmail = (
+      prequalSubmission?.email ?? paymentContact?.email ?? offer.shopperEmail ?? ''
+    ).trim();
+
+    const purchase: Omit<OfferPurchase, 'id' | 'purchasedAt'> & { purchasedAt: ReturnType<typeof serverTimestamp> } = {
+      dealerId: offer.dealerId,
+      offerId: offer.id,
+      vehicleModelName: offer.vehicleModelName,
+      offerType: offer.offerType,
+      purchaseTotal: totalAmount,
+      amountDueAtSigning,
+      tradeInValue,
+      selectedAddons: selectedAddonDetails.map((addon) => ({
+        id: addon.id,
+        name: addon.name,
+        price: addon.price,
+      })),
+      customer: {
+        firstName: prequalSubmission?.firstName ?? undefined,
+        lastName: prequalSubmission?.lastName ?? undefined,
+        email: customerEmail,
+        phone: prequalSubmission?.phone,
+      },
+      paymentContactName: paymentContact?.name ?? null,
+      appointment: appointment
+        ? {
+            method: appointment.method,
+            date: appointment.date ? appointment.date.toISOString() : null,
+            timeSlot: appointment.timeSlot,
+          }
+        : null,
+      purchasedAt: serverTimestamp(),
+    };
+
+    await addDoc(collection(firestore, 'offerPurchases'), purchase);
+  };
 
   const handleCompletePurchase = () => {
     startNavigate(() => {
-      router.push('/checkout/success');
+      void (async () => {
+        try {
+          await recordPurchase();
+        } catch (error) {
+          console.error('Failed to record purchase', error);
+        } finally {
+          router.push('/checkout/success');
+        }
+      })();
     });
   };
 
