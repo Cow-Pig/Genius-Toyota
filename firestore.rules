@@ -90,6 +90,20 @@ service cloud.firestore {
     }
 
     /**
+     * @description Allows dealers to record purchases from checkout while ensuring they can only access their own records.
+     * @path /offerPurchases/{purchaseId}
+     * @allow (read): if canAccessPurchase();
+     * @allow (create): if isCreatingOwnPurchase();
+     * @deny  (update, delete): if false; // Purchases are immutable once written
+     */
+    match /offerPurchases/{purchaseId} {
+      allow read: if canAccessPurchase();
+      allow create: if isCreatingOwnPurchase();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
      * @description Allows users to manage their income verification data.
      * @path /users/{userId}/incomeVerifications/{incomeVerificationId}
      * @allow (get, list, create, update, delete): if isOwner(userId);
@@ -316,6 +330,21 @@ service cloud.firestore {
 
     function isOwner(userId) {
       return request.auth.uid == userId;
+    }
+
+    function isCreatingOwnPurchase() {
+      return isSignedIn() &&
+        request.resource.data.dealerId is string &&
+        request.resource.data.dealerId == request.auth.uid &&
+        request.resource.data.offerId is string &&
+        request.resource.data.purchasedAt == request.time;
+    }
+
+    function canAccessPurchase() {
+      return isSignedIn() &&
+        resource != null &&
+        resource.data.dealerId is string &&
+        resource.data.dealerId == request.auth.uid;
     }
 
     function isExistingOwner(userId) {
