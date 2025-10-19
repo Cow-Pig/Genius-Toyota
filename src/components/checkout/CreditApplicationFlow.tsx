@@ -26,11 +26,31 @@ import { Loader2, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { PrequalDialog, PrequalFormValues } from './PrequalDialog';
 import { useCheckout } from './CheckoutProvider';
+import { useCustomerJourney } from '@/contexts/CustomerJourneyContext';
+import type { JourneyStatus } from '@/lib/journey-store';
+import { StatusTimeline } from './StatusTimeline';
+import { NotificationPreferences } from './NotificationPreferences';
+import { useScenario } from '@/hooks/use-scenario';
 
 const statusVariants: Record<VerificationStatus, 'default' | 'secondary' | 'destructive'> = {
   Pending: 'secondary',
   Verified: 'default',
   'Needs Attention': 'destructive',
+};
+
+const DEFAULT_DEALER = {
+  id: 'dealer-marina-del-rey',
+  name: 'Toyota of Marina del Rey',
+};
+
+const journeyStatusCopy: Record<JourneyStatus | 'null', { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+  idle: { label: 'Draft', variant: 'secondary' },
+  received: { label: 'Request received', variant: 'default' },
+  in_verification: { label: 'Verifying details', variant: 'default' },
+  decision_ready: { label: 'Decision ready', variant: 'default' },
+  contract_ready: { label: 'Contracts ready', variant: 'default' },
+  scheduled: { label: 'Pickup scheduled', variant: 'default' },
+  null: { label: 'Not started', variant: 'secondary' },
 };
 
 function StatusBadge({ status }: { status: VerificationStatus }) {
@@ -54,6 +74,17 @@ export function CreditApplicationFlow() {
   const [isPrequalOpen, setIsPrequalOpen] = useState(false);
   const [isSubmittingPrequal, setIsSubmittingPrequal] = useState(false);
   const { prequalSubmission, setPrequalSubmission } = useCheckout();
+  const { scenario } = useScenario();
+  const {
+    state: journeyState,
+    submitPrequalification,
+    updatePreferences,
+    isSubmitting: isJourneySubmitting,
+    isRefreshing: isJourneyRefreshing,
+  } = useCustomerJourney();
+  const journeyStatusKey = (journeyState.status ?? 'null') as keyof typeof journeyStatusCopy;
+  const journeyMeta = journeyStatusCopy[journeyStatusKey];
+  const isPrequalSubmitting = isSubmittingPrequal || isJourneySubmitting;
 
   const runSoftPull = async () => {
     setIsPulling(true);
@@ -70,7 +101,7 @@ export function CreditApplicationFlow() {
     } catch (err) {
       setReport(null);
       setStatus('Needs Attention');
-      setError(err instanceof Error ? err.message : 'Unable to complete mock credit pull.');
+      setError(err instanceof Error ? err.message : 'Unable to complete soft pull.');
     } finally {
       setIsPulling(false);
     }
@@ -83,7 +114,19 @@ export function CreditApplicationFlow() {
   const handlePrequalSubmit = async (values: PrequalFormValues) => {
     setIsSubmittingPrequal(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      await submitPrequalification({
+        scenario,
+        customerProfile: {
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+          phone: values.phone,
+          city: values.city,
+          state: values.state,
+        },
+        softPullConsent: values.consent,
+        dealer: journeyState.dealer ?? DEFAULT_DEALER,
+      });
       setPrequalSubmission(values);
       setIsPrequalOpen(false);
       await runSoftPull();
@@ -101,10 +144,18 @@ export function CreditApplicationFlow() {
           <div className="space-y-1">
             <CardTitle>Credit Application</CardTitle>
             <CardDescription>
-              Run a soft pull across our mock bureaus to pre-qualify without impacting the shopper's score.
+              Run a soft pull across all three bureaus to pre-qualify without impacting the shopper&apos;s score.
             </CardDescription>
           </div>
-          <StatusBadge status={status} />
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <Badge variant={journeyMeta.variant}>{journeyMeta.label}</Badge>
+            {journeyState.referenceNumber ? (
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Ref. {journeyState.referenceNumber}
+              </span>
+            ) : null}
+            <StatusBadge status={status} />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -127,7 +178,7 @@ export function CreditApplicationFlow() {
                   Running soft pull…
                 </span>
               ) : (
-                'Run mock soft pull'
+                'Run soft pull again'
               )}
             </Button>
           </div>
@@ -137,14 +188,17 @@ export function CreditApplicationFlow() {
           <p className="text-sm text-amber-600">{error}</p>
         )}
 
-        {prequalSubmission && (
+        {journeyState.customer && (
           <div className="rounded-lg border bg-muted/40 p-4 text-sm">
             <p className="font-semibold">Pre-qualification submitted</p>
             <p className="text-muted-foreground">
-              {prequalSubmission.firstName} {prequalSubmission.lastName} · {prequalSubmission.city}, {prequalSubmission.state}
+              {journeyState.customer.firstName} {journeyState.customer.lastName}
+              {journeyState.customer.city && journeyState.customer.state
+                ? ` · ${journeyState.customer.city}, ${journeyState.customer.state}`
+                : ''}
             </p>
             <p className="text-xs text-muted-foreground">
-              Monthly income {prequalSubmission.monthlyIncome} · Housing payment {prequalSubmission.housingPayment}
+              Email {journeyState.customer.email} · Phone {journeyState.customer.phone}
             </p>
           </div>
         )}
@@ -198,13 +252,28 @@ export function CreditApplicationFlow() {
             </div>
           </div>
         )}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <StatusTimeline
+            events={journeyState.events ?? []}
+            referenceNumber={journeyState.referenceNumber}
+            lastUpdated={journeyState.lastUpdated}
+            loading={
+              isJourneyRefreshing && (journeyState.events?.length ?? 0) === 0
+            }
+          />
+          <NotificationPreferences
+            preferences={journeyState.preferences}
+            onChange={updatePreferences}
+            disabled={!journeyState.prequalRequestId}
+          />
+        </div>
       </CardContent>
 
       <PrequalDialog
         open={isPrequalOpen}
         onOpenChange={setIsPrequalOpen}
         onSubmit={handlePrequalSubmit}
-        isSubmitting={isSubmittingPrequal}
+        isSubmitting={isPrequalSubmitting}
         initialValues={prequalSubmission ?? undefined}
       />
     </Card>

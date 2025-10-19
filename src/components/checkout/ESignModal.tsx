@@ -42,7 +42,7 @@ export function ESignModal() {
             <ScrollArea className="h-[500px] rounded-md border p-4">
                 <h3 className="font-bold">RETAIL INSTALLMENT SALE CONTRACT</h3>
                 <p className='font-bold text-lg'>Amount Due At Signing: {formatCurrency(amountDueAtSigning)}</p>
-                <p className="text-sm text-gray-500">This is a mock contract for demonstration purposes only.</p>
+                <p className="text-sm text-gray-500">This preview is for illustration. Final contract packets include dealership specifics and signatures.</p>
                 <p className="mt-4">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ... [Content continues for several pages]</p>
             </ScrollArea>
             <div className="mt-4 flex items-center space-x-2">

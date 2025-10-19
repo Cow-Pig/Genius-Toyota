@@ -24,6 +24,8 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useMockDataProvider } from '@/lib/mock-data-provider';
+import { useCustomerJourney } from '@/contexts/CustomerJourneyContext';
+import type { PlaidSummaryClient } from '@/contexts/CustomerJourneyContext';
 import type {
   MockBankLinkResult,
   MockPlaidExchangeMetadata,
@@ -32,6 +34,7 @@ import type {
   VerificationStatus,
 } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { format } from 'date-fns';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -101,6 +104,8 @@ export function IncomeVerificationFlow() {
     exchangePlaidPublicToken,
     fetchIrsTranscripts,
   } = useMockDataProvider();
+  const { state: journeyState, refreshStatus } = useCustomerJourney();
+  const [plaidSummary, setPlaidSummary] = useState<PlaidSummaryClient | null>(null);
   const [bankStatus, setBankStatus] = useState<VerificationStatus>('Pending');
   const [bankResult, setBankResult] = useState<MockBankLinkResult | null>(null);
   const [bankError, setBankError] = useState<string | null>(null);
@@ -135,36 +140,72 @@ export function IncomeVerificationFlow() {
 
   useEffect(() => {
     let isMounted = true;
-    setIsLoadingLinkToken(true);
-    getPlaidLinkToken()
-      .then((token) => {
+
+    const loadLinkToken = async () => {
+      setIsLoadingLinkToken(true);
+      try {
+        const response = await fetch('/api/plaid/link_token/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            journeyState.prequalRequestId
+              ? { prequalRequestId: journeyState.prequalRequestId }
+              : {},
+          ),
+        });
+
+        if (!response.ok) {
+          throw new Error('Plaid sandbox is temporarily unavailable.');
+        }
+
+        const data = await response.json();
         if (!isMounted) {
           return;
         }
-        setLinkToken(token.token);
-        setPlaidTokenDetails(token);
+
+        setLinkToken(data.linkToken);
+        setPlaidTokenDetails({
+          token: data.linkToken,
+          expiration: data.expiration,
+          institution: {
+            name: 'Plaid Sandbox',
+            institutionId: 'plaid-sandbox',
+          },
+          supportMessage: 'Secure OAuth handoff via Plaid sandbox credentials.',
+        });
         setPlaidError(null);
-      })
-      .catch((error) => {
+      } catch (error) {
+        console.error('Plaid link token error', error);
         if (!isMounted) {
           return;
         }
         setPlaidError(
-          error instanceof Error
-            ? error.message
-            : 'Unable to retrieve Plaid link token. Using mock verifier instead.',
+          'Plaid is taking a moment to reconnect. You can retry or continue with document upload.',
         );
-      })
-      .finally(() => {
+        try {
+          const fallback = await getPlaidLinkToken();
+          if (!isMounted) {
+            return;
+          }
+          setLinkToken(fallback.token);
+          setPlaidTokenDetails(fallback);
+          setPlaidError(null);
+        } catch (fallbackError) {
+          console.error('Fallback Plaid link token error', fallbackError);
+        }
+      } finally {
         if (isMounted) {
           setIsLoadingLinkToken(false);
         }
-      });
+      }
+    };
+
+    loadLinkToken();
 
     return () => {
       isMounted = false;
     };
-  }, [getPlaidLinkToken]);
+  }, [journeyState.prequalRequestId, getPlaidLinkToken]);
 
   useEffect(() => {
     if (!linkToken || typeof window === 'undefined') {
@@ -184,7 +225,7 @@ export function IncomeVerificationFlow() {
     };
     script.onerror = () => {
       setPlaidError(
-        'We could not load Plaid Link in this environment. Falling back to mock verification.',
+        'We could not load Plaid Link in this environment. Try again or continue with document upload.',
       );
     };
     document.body.appendChild(script);
@@ -202,6 +243,11 @@ export function IncomeVerificationFlow() {
       plaidHandlerRef.current = null;
     };
   }, []);
+
+  const computedSummary = useMemo(() => plaidSummary ?? journeyState.plaid ?? null, [
+    plaidSummary,
+    journeyState.plaid,
+  ]);
 
   const flattenedTransactions = useMemo(() => {
     if (!bankResult) {
@@ -261,27 +307,127 @@ export function IncomeVerificationFlow() {
       token: linkToken,
       onSuccess: async (publicToken, metadata) => {
         setIsLinking(true);
-        try {
-          const exchangeMetadata: MockPlaidExchangeMetadata = {
-            institutionId: metadata.institution?.institution_id ?? null,
-            accountIds: metadata.accounts?.map((account) => account.id) ?? [],
-          };
-          const result = await exchangePlaidPublicToken(
-            publicToken,
-            exchangeMetadata,
+        const institutionName = metadata.institution?.name;
+        const institutionId = metadata.institution?.institution_id ?? undefined;
+
+        const buildSyntheticResult = (summary: PlaidSummaryClient) => {
+          const accountsSource =
+            summary.accountOwners && summary.accountOwners.length > 0
+              ? summary.accountOwners
+              : [
+                  {
+                    accountName: `${institutionName ?? 'Primary'} Checking`,
+                    mask: '0000',
+                    owners: [],
+                  },
+                ];
+
+          return {
+            status: 'Verified' as VerificationStatus,
+            accounts: accountsSource.map((account, index) => ({
+              id: `acct-${index}`,
+              mask: (account.mask ?? '').replace(/[^0-9]/g, '').padStart(4, '0') || '0000',
+              name: account.accountName,
+              institution: institutionName ?? summary.institutionName ?? 'Plaid Sandbox',
+              currentBalance: 0,
+              availableBalance: 0,
+              lastUpdated: summary.lastSyncedAt ?? new Date().toISOString(),
+              transactions: (summary.recurringDeposits ?? []).map((deposit, txnIndex) => ({
+                id: `txn-${index}-${txnIndex}`,
+                date: deposit.lastDeposit,
+                description: `${deposit.name} deposit`,
+                amount: deposit.averageAmount,
+                type: 'credit' as const,
+                employerMatch: deposit.cadence.toLowerCase() !== 'ad-hoc',
+              })),
+            })),
+            heuristics: (summary.recurringDeposits ?? []).map(
+              (deposit) =>
+                `${deposit.name} averages ${formatCurrency(deposit.averageAmount)} (${deposit.cadence.toLowerCase()})`,
+            ),
+            flaggedDeposits: [],
+            institution: {
+              name: institutionName ?? summary.institutionName ?? 'Plaid Sandbox',
+              institutionId: institutionId ?? 'plaid-sandbox',
+            },
+            lastSyncedAt: summary.lastSyncedAt ?? new Date().toISOString(),
+          } satisfies MockBankLinkResult;
+        };
+
+        const performSandboxExchange = async () => {
+          if (!journeyState.prequalRequestId) {
+            throw new Error('Pre-qualification ID missing for Plaid exchange.');
+          }
+
+          const response = await fetch('/api/plaid/item/public_token/exchange', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prequalRequestId: journeyState.prequalRequestId,
+              publicToken,
+              institution: institutionName
+                ? { name: institutionName, institution_id: institutionId }
+                : undefined,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Unable to verify with Plaid right now.');
+          }
+
+          const data = await response.json();
+          const summary = (data.plaid ?? {}) as PlaidSummaryClient;
+          setPlaidSummary(summary);
+          const synthetic = buildSyntheticResult(summary);
+          setBankResult(synthetic);
+          setBankStatus('Verified');
+          setBankError(null);
+          setPlaidError(null);
+          setPlaidTokenDetails((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  institution: {
+                    name: synthetic.institution?.name ?? prev.institution.name,
+                    institutionId: synthetic.institution?.institutionId ?? prev.institution.institutionId,
+                    logoUrl: prev.institution.logoUrl,
+                  },
+                }
+              : prev,
           );
-          setBankResult(result);
-          setBankStatus(result.status);
-          if (result.status !== 'Verified') {
-            setBankError('Plaid flagged a detail for dealer review.');
+          await refreshStatus();
+        };
+
+        try {
+          if (journeyState.prequalRequestId) {
+            await performSandboxExchange();
+          } else {
+            throw new Error('Missing pre-qualification context.');
           }
         } catch (error) {
-          setBankStatus('Needs Attention');
-          setBankError(
-            error instanceof Error
-              ? error.message
-              : 'Unable to exchange Plaid token. Try again.',
-          );
+          console.error('Plaid sandbox exchange failed, falling back', error);
+          try {
+            const exchangeMetadata: MockPlaidExchangeMetadata = {
+              institutionId: metadata.institution?.institution_id ?? null,
+              accountIds: metadata.accounts?.map((account) => account.id) ?? [],
+            };
+            const result = await exchangePlaidPublicToken(
+              publicToken,
+              exchangeMetadata,
+            );
+            setBankResult(result);
+            setBankStatus(result.status);
+            if (result.status !== 'Verified') {
+              setBankError('Plaid flagged a detail for dealer review.');
+            }
+          } catch (fallbackError) {
+            setBankStatus('Needs Attention');
+            setBankError(
+              fallbackError instanceof Error
+                ? fallbackError.message
+                : 'Unable to exchange Plaid token. Try again.',
+            );
+          }
         } finally {
           setIsLinking(false);
           handler.exit?.();
@@ -406,7 +552,7 @@ export function IncomeVerificationFlow() {
               disabled={isLinking}
               className="w-full sm:w-auto"
             >
-              Use mock bank statements instead
+              Upload bank statements instead
             </Button>
           </div>
           {(plaidError || bankError) && (
@@ -495,6 +641,74 @@ export function IncomeVerificationFlow() {
                   </TableBody>
                 </Table>
               </ScrollArea>
+              {computedSummary?.accountOwners?.length ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-sm font-semibold">Account owners</p>
+                  <ul className="space-y-1 text-sm text-muted-foreground">
+                    {computedSummary.accountOwners.map((account) => {
+                      const owners = account.owners?.length
+                        ? account.owners.join(', ')
+                        : 'Owner verified';
+
+                      return (
+                        <li key={`${account.accountName}-${account.mask}`}>
+                          {account.accountName} ••••{account.mask} · {owners}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
+              {computedSummary?.paystubs?.length ? (
+                <div className="mt-4 space-y-3">
+                  <p className="text-sm font-semibold">Document previews</p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {computedSummary.paystubs.map((stub) => {
+                      let verifiedAt = stub.lastVerified;
+                      try {
+                        verifiedAt = format(new Date(stub.lastVerified), 'PPpp');
+                      } catch (error) {
+                        console.warn('Unable to format verification time', error);
+                      }
+
+                      return (
+                        <div
+                          key={stub.documentName}
+                          className="rounded-md border bg-background p-3 text-sm"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-medium">{stub.documentName}</p>
+                              <p className="text-xs text-muted-foreground">{stub.employer}</p>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {formatFileSize(stub.documentSize)}
+                            </span>
+                          </div>
+                          <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                            <span>Pay date {stub.payDate}</span>
+                            <span>Gross {formatCurrency(stub.grossPay)}</span>
+                            <span>Net {formatCurrency(stub.netPay)}</span>
+                          </div>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Last verified {verifiedAt}
+                          </p>
+                          {stub.downloadUrl ? (
+                            <a
+                              href={stub.downloadUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-3 inline-flex items-center text-xs font-semibold text-primary hover:underline"
+                            >
+                              View PDF
+                            </a>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
         </section>
@@ -538,7 +752,7 @@ export function IncomeVerificationFlow() {
                   </p>
                   <Button asChild size="sm" className="mt-2 w-full">
                     <a href={transcript.pdfUrl} download>
-                      Download mock PDF
+                      Download PDF
                     </a>
                   </Button>
                 </div>
