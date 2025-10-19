@@ -39,6 +39,37 @@ export interface FinancialOffer {
   vehicleDetails?: VehicleDetails;
 }
 
+export interface OfferPurchaseAddon {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface OfferPurchase {
+  id: string;
+  dealerId: string;
+  offerId: string;
+  vehicleModelName: string;
+  offerType: OfferType;
+  purchaseTotal: number;
+  amountDueAtSigning: number;
+  tradeInValue: number;
+  selectedAddons: OfferPurchaseAddon[];
+  customer: {
+    firstName?: string;
+    lastName?: string;
+    email: string;
+    phone?: string;
+  };
+  paymentContactName?: string | null;
+  appointment?: {
+    method: 'pickup' | 'delivery';
+    date?: string | null;
+    timeSlot?: string | null;
+  } | null;
+  purchasedAt: Date | Timestamp | FieldValue | { seconds: number; nanoseconds?: number };
+}
+
 export interface Vehicle {
   id: string;
   modelName: string;

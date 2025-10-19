@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 import { FinancialOffer } from '@/types';
+import type { PrequalFormValues } from './PrequalDialog';
 import { useSearchParams } from 'next/navigation';
 
 // Mock data imports - in a real app, this would be fetched from an API
@@ -28,10 +29,19 @@ interface CheckoutState {
   tradeInValue: number;
   availableAddons: Addon[];
   selectedAddons: string[];
+  selectedAddonDetails: Addon[];
   toggleAddon: (id: string) => void;
   totalAddonsPrice: number;
   totalAmount: number;
   amountDueAtSigning: number;
+  prequalSubmission: PrequalFormValues | null;
+  setPrequalSubmission: (values: PrequalFormValues | null) => void;
+  paymentContact: { email: string; name: string } | null;
+  setPaymentContact: (contact: { email: string; name: string } | null) => void;
+  appointment: { method: 'pickup' | 'delivery'; date: Date | null; timeSlot: string | null } | null;
+  setAppointment: (
+    details: { method: 'pickup' | 'delivery'; date: Date | null; timeSlot: string | null } | null,
+  ) => void;
 }
 
 const CheckoutContext = createContext<CheckoutState | undefined>(undefined);
@@ -73,6 +83,13 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
   const [tradeInValue] = useState<number>(mockTradeIn.estimate);
   const [availableAddons] = useState<Addon[]>(mockAddons);
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+  const [prequalSubmission, setPrequalSubmission] = useState<PrequalFormValues | null>(null);
+  const [paymentContact, setPaymentContact] = useState<{ email: string; name: string } | null>(null);
+  const [appointment, setAppointment] = useState<{
+    method: 'pickup' | 'delivery';
+    date: Date | null;
+    timeSlot: string | null;
+  } | null>(null);
 
   const toggleAddon = useCallback((id: string) => {
     setSelectedAddons((prev) =>
@@ -80,13 +97,19 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const totalAddonsPrice = useMemo(() =>
-    availableAddons.reduce(
-      (total, addon) =>
-        selectedAddons.includes(addon.id) ? total + addon.price : total,
-      0,
-    ),
+  const totalAddonsPrice = useMemo(
+    () =>
+      availableAddons.reduce(
+        (total, addon) =>
+          selectedAddons.includes(addon.id) ? total + addon.price : total,
+        0,
+      ),
     [selectedAddons, availableAddons],
+  );
+
+  const selectedAddonDetails = useMemo(
+    () => availableAddons.filter((addon) => selectedAddons.includes(addon.id)),
+    [availableAddons, selectedAddons],
   );
 
   const totalAmount = useMemo(
@@ -107,9 +130,16 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
       availableAddons,
       selectedAddons,
       toggleAddon,
+      selectedAddonDetails,
       totalAddonsPrice,
       totalAmount,
       amountDueAtSigning,
+      prequalSubmission,
+      setPrequalSubmission,
+      paymentContact,
+      setPaymentContact,
+      appointment,
+      setAppointment,
     }),
     [
       offer,
@@ -117,9 +147,13 @@ export function CheckoutProvider({ children }: { children: ReactNode }) {
       availableAddons,
       selectedAddons,
       toggleAddon,
+      selectedAddonDetails,
       totalAddonsPrice,
       totalAmount,
       amountDueAtSigning,
+      prequalSubmission,
+      paymentContact,
+      appointment,
     ],
   );
 

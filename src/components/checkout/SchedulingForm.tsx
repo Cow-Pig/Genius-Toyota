@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
@@ -9,6 +9,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Home, MapPin } from 'lucide-react';
+import { useCheckout } from './CheckoutProvider';
 
 const timeSlots = {
     pickup: ['10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM'],
@@ -16,9 +17,33 @@ const timeSlots = {
 }
 
 export function SchedulingForm() {
-  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>('pickup');
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const { appointment, setAppointment } = useCheckout();
+  const [deliveryMethod, setDeliveryMethod] = useState<'pickup' | 'delivery'>(appointment?.method ?? 'pickup');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(appointment?.date ?? new Date());
+  const [selectedTime, setSelectedTime] = useState<string | null>(appointment?.timeSlot ?? null);
+
+  useEffect(() => {
+    setAppointment({
+      method: deliveryMethod,
+      date: selectedDate ?? null,
+      timeSlot: selectedTime,
+    });
+  }, [deliveryMethod, selectedDate, selectedTime, setAppointment]);
+
+  const handleMethodChange = (value: 'pickup' | 'delivery') => {
+    setDeliveryMethod(value);
+    setAppointment({ method: value, date: selectedDate ?? null, timeSlot: selectedTime });
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    setAppointment({ method: deliveryMethod, date: date ?? null, timeSlot: selectedTime });
+  };
+
+  const handleTimeSelect = (slot: string) => {
+    setSelectedTime(slot);
+    setAppointment({ method: deliveryMethod, date: selectedDate ?? null, timeSlot: slot });
+  };
 
   return (
     <Card>
@@ -27,7 +52,11 @@ export function SchedulingForm() {
         <CardDescription>Choose your preferred date and time to receive your new vehicle.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <RadioGroup defaultValue="pickup" onValueChange={(value: 'pickup' | 'delivery') => setDeliveryMethod(value)} className="grid grid-cols-2 gap-4">
+        <RadioGroup
+          value={deliveryMethod}
+          onValueChange={(value: 'pickup' | 'delivery') => handleMethodChange(value)}
+          className="grid grid-cols-2 gap-4"
+        >
             <div>
                 <RadioGroupItem value="pickup" id="pickup" className="peer sr-only" />
                 <Label
@@ -55,7 +84,7 @@ export function SchedulingForm() {
                  <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={setSelectedDate}
+                    onSelect={handleDateSelect}
                     className="rounded-md border"
                     disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1))}
                 />
@@ -64,10 +93,10 @@ export function SchedulingForm() {
                 <h4 className="font-semibold mb-3">Available Time Slots</h4>
                 <div className="grid grid-cols-2 gap-2">
                     {timeSlots[deliveryMethod].map(slot => (
-                        <Button 
-                            key={slot} 
-                            variant={selectedTime === slot ? 'default' : 'outline'} 
-                            onClick={() => setSelectedTime(slot)}
+                        <Button
+                            key={slot}
+                            variant={selectedTime === slot ? 'default' : 'outline'}
+                            onClick={() => handleTimeSelect(slot)}
                             disabled={!selectedDate}
                         >
                             {slot}
