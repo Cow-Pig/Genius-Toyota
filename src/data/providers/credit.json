@@ -1,0 +1,31 @@
+{
+  "report": {
+    "applicantName": "Jamie Rivera",
+    "score": 738,
+    "scoreBand": "Prime",
+    "reportDate": "2024-08-10",
+    "tradelines": [
+      {
+        "bureau": "Experian",
+        "accountType": "Auto Loan",
+        "openedDate": "2021-05-12",
+        "balance": 12500,
+        "paymentStatus": "Current"
+      },
+      {
+        "bureau": "Equifax",
+        "accountType": "Credit Card",
+        "openedDate": "2018-02-01",
+        "balance": 2300,
+        "paymentStatus": "Current"
+      },
+      {
+        "bureau": "TransUnion",
+        "accountType": "Student Loan",
+        "openedDate": "2015-09-01",
+        "balance": 6200,
+        "paymentStatus": "Current"
+      }
+    ]
+  }
+}
