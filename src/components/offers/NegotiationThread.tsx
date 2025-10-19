@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -112,6 +112,28 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
   const { firestore, user } = useFirebase();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [customerId, setCustomerId] = useState<string>(() => `guest-${offer.id}`);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const storageKey = `negotiationThread:${offer.id}:customerId`;
+    const existing = window.localStorage.getItem(storageKey);
+
+    if (existing) {
+      setCustomerId(existing);
+      return;
+    }
+
+    const generatedId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : Math.random().toString(36).slice(2, 10);
+    const generated = `guest-${generatedId}`;
+
+    window.localStorage.setItem(storageKey, generated);
+    setCustomerId(generated);
+  }, [offer.id]);
 
   const threadRef = useMemoFirebase(() => {
     if (!firestore || !offer.id) return null;
@@ -128,6 +150,13 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
   const counterPresets = useMemo(() => buildCounterPresets(offer), [offer]);
 
   const authorRole = user?.uid === offer.dealerId ? 'dealer' : 'customer';
+  const resolvedAuthorId = (() => {
+    if (authorRole === 'dealer') {
+      return user?.uid ?? offer.dealerId;
+    }
+
+    return user?.uid ?? customerId;
+  })();
 
   const ensureThreadMetadata = () => {
     if (!threadRef || !firestore) return;
@@ -137,6 +166,9 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
       status: 'open',
       updatedAt: serverTimestamp(),
     };
+    if (authorRole === 'customer') {
+      basePayload.customerId = resolvedAuthorId;
+    }
     if (!messages || messages.length === 0) {
       basePayload.createdAt = serverTimestamp();
     }
@@ -148,13 +180,14 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
     reasonCode: NegotiationReasonCode = 'CUSTOM',
     counterProposal?: NegotiationMessage['counterProposal'],
   ) => {
-    if (!threadRef || !firestore || !user) return;
+    if (!threadRef || !firestore) return;
+    if (!resolvedAuthorId) return;
     ensureThreadMetadata();
     setIsSending(true);
     try {
       await addDocumentNonBlocking(collection(threadRef, 'messages'), {
         negotiationThreadId: offer.id,
-        authorId: user.uid,
+        authorId: resolvedAuthorId,
         authorRole,
         content,
         reasonCode,
