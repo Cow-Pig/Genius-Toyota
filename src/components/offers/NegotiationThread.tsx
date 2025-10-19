@@ -70,6 +70,36 @@ function buildLocalMessageId() {
   return `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function sanitizeCounterProposalPayload(
+  payload?: NegotiationMessage['counterProposal'] | null,
+): PersistedNegotiationMessage['counterProposal'] {
+  if (!payload) {
+    return null;
+  }
+
+  const sanitized: PersistedNegotiationMessage['counterProposal'] = {
+    termMonths:
+      typeof payload.termMonths === 'number' && Number.isFinite(payload.termMonths)
+        ? Math.round(payload.termMonths)
+        : null,
+    mileageAllowance:
+      typeof payload.mileageAllowance === 'number' && Number.isFinite(payload.mileageAllowance)
+        ? Math.round(payload.mileageAllowance)
+        : null,
+    downPayment:
+      typeof payload.downPayment === 'number' && Number.isFinite(payload.downPayment)
+        ? Number(payload.downPayment)
+        : null,
+    estimatedPayment:
+      typeof payload.estimatedPayment === 'number' && Number.isFinite(payload.estimatedPayment)
+        ? Number(payload.estimatedPayment)
+        : null,
+  };
+
+  const hasValue = Object.values(sanitized).some((value) => value !== null);
+  return hasValue ? sanitized : null;
+}
+
 function normalizeMessage(
   input: NegotiationMessage,
   fallbackThreadId: string,
@@ -90,14 +120,7 @@ function normalizeMessage(
     return new Date().toISOString();
   })();
 
-  const counterProposal = input.counterProposal
-    ? {
-        termMonths: input.counterProposal.termMonths ?? null,
-        mileageAllowance: input.counterProposal.mileageAllowance ?? null,
-        downPayment: input.counterProposal.downPayment ?? null,
-        estimatedPayment: input.counterProposal.estimatedPayment ?? null,
-      }
-    : null;
+  const counterProposal = sanitizeCounterProposalPayload(input.counterProposal);
 
   return {
     id: input.id ?? buildLocalMessageId(),
@@ -295,14 +318,7 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
     if (!content) return;
     if (!resolvedAuthorId) return;
 
-    const counterProposalPayload = counterProposal
-      ? {
-          termMonths: counterProposal.termMonths ?? null,
-          mileageAllowance: counterProposal.mileageAllowance ?? null,
-          downPayment: counterProposal.downPayment ?? null,
-          estimatedPayment: counterProposal.estimatedPayment ?? null,
-        }
-      : null;
+    const counterProposalPayload = sanitizeCounterProposalPayload(counterProposal);
 
     const localEntry: PersistedNegotiationMessage = {
       id: buildLocalMessageId(),
