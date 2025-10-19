@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -204,6 +204,16 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
   const [localMessages, setLocalMessages] = useState<PersistedNegotiationMessage[]>(() =>
     loadPersistedNegotiationMessages(offer.id),
   );
+  const latestLocalMessagesRef = useRef(localMessages);
+  const syncedSnapshotSignatureRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    latestLocalMessagesRef.current = localMessages;
+  }, [localMessages]);
+
+  useEffect(() => {
+    syncedSnapshotSignatureRef.current = null;
+  }, [offer.id]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -257,33 +267,29 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
     if (!messages) return;
 
     const normalized = messages.map((msg) => normalizeMessage(msg, offer.id, authorRole));
+    const normalizedSignature = JSON.stringify(
+      normalized.map((entry) => ({
+        id: entry.id,
+        authorId: entry.authorId,
+        authorRole: entry.authorRole,
+        content: entry.content,
+        reasonCode: entry.reasonCode,
+        counterProposal: entry.counterProposal,
+        createdAt: entry.createdAt,
+      })),
+    );
 
-    setLocalMessages((current) => {
-      if (normalized.length === 0 && current.some((entry) => entry.isLocalOnly)) {
-        return current;
-      }
+    if (syncedSnapshotSignatureRef.current === normalizedSignature) {
+      return;
+    }
 
-      const hasDifference =
-        normalized.length !== current.length ||
-        normalized.some((entry, index) => {
-          const existing = current[index];
-          if (!existing) return true;
-          if (
-            existing.id !== entry.id ||
-            existing.content !== entry.content ||
-            existing.createdAt !== entry.createdAt ||
-            existing.reasonCode !== entry.reasonCode
-          ) {
-            return true;
-          }
+    syncedSnapshotSignatureRef.current = normalizedSignature;
 
-          const existingCounter = existing.counterProposal ?? null;
-          const nextCounter = entry.counterProposal ?? null;
-          return JSON.stringify(existingCounter) !== JSON.stringify(nextCounter);
-        });
+    if (normalized.length === 0 && latestLocalMessagesRef.current.some((entry) => entry.isLocalOnly)) {
+      return;
+    }
 
-      return hasDifference ? normalized : current;
-    });
+    setLocalMessages(normalized);
   }, [messages, offer.id, authorRole]);
 
   useEffect(() => {
