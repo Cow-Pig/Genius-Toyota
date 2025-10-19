@@ -22,6 +22,11 @@ import { formatCurrency } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { MessageSquare, Send } from 'lucide-react';
+import {
+  loadPersistedNegotiationMessages,
+  persistNegotiationMessages,
+  type PersistedNegotiationMessage,
+} from '@/lib/negotiation-storage';
 
 interface NegotiationThreadProps {
   offer: FinancialOffer;
@@ -37,14 +42,73 @@ interface CounterPreset {
   };
 }
 
-function formatDate(value?: Date | Timestamp | { seconds: number; nanoseconds?: number }) {
+function formatDate(
+  value?: Date | Timestamp | { seconds: number; nanoseconds?: number } | string,
+) {
   if (!value) return '—';
   if (value instanceof Date) return value.toLocaleString();
   if (value instanceof Timestamp) return value.toDate().toLocaleString();
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return '—';
+    }
+
+    return parsed.toLocaleString();
+  }
   if (typeof value === 'object' && 'seconds' in value) {
     return new Date(value.seconds * 1000).toLocaleString();
   }
   return '—';
+}
+
+function buildLocalMessageId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeMessage(
+  input: NegotiationMessage,
+  fallbackThreadId: string,
+  authorRole: 'dealer' | 'customer',
+): PersistedNegotiationMessage {
+  const createdAt = (() => {
+    const raw = input.createdAt;
+    if (!raw) return new Date().toISOString();
+    if (raw instanceof Timestamp) return raw.toDate().toISOString();
+    if (raw instanceof Date) return raw.toISOString();
+    if (typeof raw === 'string') {
+      const parsed = new Date(raw);
+      return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+    }
+    if (typeof raw === 'object' && 'seconds' in raw) {
+      return new Date(raw.seconds * 1000).toISOString();
+    }
+    return new Date().toISOString();
+  })();
+
+  const counterProposal = input.counterProposal
+    ? {
+        termMonths: input.counterProposal.termMonths,
+        mileageAllowance: input.counterProposal.mileageAllowance,
+        downPayment: input.counterProposal.downPayment,
+        estimatedPayment: input.counterProposal.estimatedPayment,
+      }
+    : undefined;
+
+  return {
+    id: input.id ?? buildLocalMessageId(),
+    negotiationThreadId: input.negotiationThreadId ?? fallbackThreadId,
+    authorId: input.authorId,
+    authorRole: input.authorRole ?? authorRole,
+    content: input.content,
+    reasonCode: input.reasonCode,
+    counterProposal,
+    createdAt,
+  };
 }
 
 function getInitials(name: string) {
@@ -113,6 +177,9 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [customerId, setCustomerId] = useState<string>(() => `guest-${offer.id}`);
+  const [localMessages, setLocalMessages] = useState<PersistedNegotiationMessage[]>(() =>
+    loadPersistedNegotiationMessages(offer.id),
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -133,6 +200,10 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
 
     window.localStorage.setItem(storageKey, generated);
     setCustomerId(generated);
+  }, [offer.id]);
+
+  useEffect(() => {
+    setLocalMessages(loadPersistedNegotiationMessages(offer.id));
   }, [offer.id]);
 
   const threadRef = useMemoFirebase(() => {
@@ -158,6 +229,45 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
     return user?.uid ?? customerId;
   })();
 
+  useEffect(() => {
+    if (!messages) return;
+
+    const normalized = messages.map((msg) => normalizeMessage(msg, offer.id, authorRole));
+
+    if (normalized.length === 0 && localMessages.some((entry) => entry.isLocalOnly)) {
+      return;
+    }
+
+    const shouldUpdate =
+      normalized.length !== localMessages.length ||
+      normalized.some((entry, index) => {
+        const current = localMessages[index];
+        if (!current) return true;
+        if (
+          current.id !== entry.id ||
+          current.content !== entry.content ||
+          current.createdAt !== entry.createdAt ||
+          current.reasonCode !== entry.reasonCode
+        ) {
+          return true;
+        }
+
+        const currentCounter = current.counterProposal ?? {};
+        const nextCounter = entry.counterProposal ?? {};
+        return JSON.stringify(currentCounter) !== JSON.stringify(nextCounter);
+      });
+
+    if (!shouldUpdate) {
+      return;
+    }
+
+    setLocalMessages(normalized);
+  }, [messages, offer.id, authorRole, localMessages]);
+
+  useEffect(() => {
+    persistNegotiationMessages(offer.id, localMessages);
+  }, [offer.id, localMessages]);
+
   const ensureThreadMetadata = () => {
     if (!threadRef || !firestore) return;
     const basePayload: Record<string, unknown> = {
@@ -176,12 +286,40 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
   };
 
   const handleSendMessage = async (
-    content: string,
+    rawContent: string,
     reasonCode: NegotiationReasonCode = 'CUSTOM',
     counterProposal?: NegotiationMessage['counterProposal'],
   ) => {
-    if (!threadRef || !firestore) return;
+    const content = rawContent.trim();
+    if (!content) return;
     if (!resolvedAuthorId) return;
+
+    const localEntry: PersistedNegotiationMessage = {
+      id: buildLocalMessageId(),
+      negotiationThreadId: offer.id,
+      authorId: resolvedAuthorId,
+      authorRole,
+      content,
+      reasonCode,
+      counterProposal: counterProposal
+        ? {
+            termMonths: counterProposal.termMonths,
+            mileageAllowance: counterProposal.mileageAllowance,
+            downPayment: counterProposal.downPayment,
+            estimatedPayment: counterProposal.estimatedPayment,
+          }
+        : undefined,
+      createdAt: new Date().toISOString(),
+      isLocalOnly: !threadRef || !firestore,
+    };
+
+    setLocalMessages((prev) => [...prev, localEntry]);
+    setMessage('');
+
+    if (!threadRef || !firestore) {
+      return;
+    }
+
     ensureThreadMetadata();
     setIsSending(true);
     try {
@@ -198,7 +336,6 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
         lastMessagePreview: content.slice(0, 140),
         updatedAt: serverTimestamp(),
       });
-      setMessage('');
     } finally {
       setIsSending(false);
     }
@@ -279,8 +416,8 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
         <Separator />
         <ScrollArea className="h-80 rounded-md border bg-muted/30 p-4">
           <div className="space-y-4">
-            {messages && messages.length > 0 ? (
-              messages.map((msg) => (
+            {localMessages.length > 0 ? (
+              localMessages.map((msg) => (
                 <div key={msg.id} className="rounded-lg bg-background p-4 shadow-sm">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <div className="flex items-center gap-2">
@@ -292,7 +429,7 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
                     </div>
                     {msg.reasonCode && <Badge variant="secondary">{msg.reasonCode}</Badge>}
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed whitespace-pre-line">{msg.content}</p>
+                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed">{msg.content}</p>
                   {msg.counterProposal && (
                     <div className="mt-3 grid gap-2 rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground md:grid-cols-2">
                       {msg.counterProposal.termMonths && (
