@@ -258,35 +258,33 @@ export function NegotiationThread({ offer }: NegotiationThreadProps) {
 
     const normalized = messages.map((msg) => normalizeMessage(msg, offer.id, authorRole));
 
-    if (normalized.length === 0 && localMessages.some((entry) => entry.isLocalOnly)) {
-      return;
-    }
+    setLocalMessages((current) => {
+      if (normalized.length === 0 && current.some((entry) => entry.isLocalOnly)) {
+        return current;
+      }
 
-    const shouldUpdate =
-      normalized.length !== localMessages.length ||
-      normalized.some((entry, index) => {
-        const current = localMessages[index];
-        if (!current) return true;
-        if (
-          current.id !== entry.id ||
-          current.content !== entry.content ||
-          current.createdAt !== entry.createdAt ||
-          current.reasonCode !== entry.reasonCode
-        ) {
-          return true;
-        }
+      const hasDifference =
+        normalized.length !== current.length ||
+        normalized.some((entry, index) => {
+          const existing = current[index];
+          if (!existing) return true;
+          if (
+            existing.id !== entry.id ||
+            existing.content !== entry.content ||
+            existing.createdAt !== entry.createdAt ||
+            existing.reasonCode !== entry.reasonCode
+          ) {
+            return true;
+          }
 
-        const currentCounter = current.counterProposal ?? null;
-        const nextCounter = entry.counterProposal ?? null;
-        return JSON.stringify(currentCounter) !== JSON.stringify(nextCounter);
-      });
+          const existingCounter = existing.counterProposal ?? null;
+          const nextCounter = entry.counterProposal ?? null;
+          return JSON.stringify(existingCounter) !== JSON.stringify(nextCounter);
+        });
 
-    if (!shouldUpdate) {
-      return;
-    }
-
-    setLocalMessages(normalized);
-  }, [messages, offer.id, authorRole, localMessages]);
+      return hasDifference ? normalized : current;
+    });
+  }, [messages, offer.id, authorRole]);
 
   useEffect(() => {
     persistNegotiationMessages(offer.id, localMessages);
