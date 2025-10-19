@@ -1,0 +1,40 @@
+{
+  "placeholderImages": [
+    {
+      "id": "corolla",
+      "description": "A silver Toyota Corolla sedan.",
+      "imageUrl": "https://images.unsplash.com/photo-1658662160331-62f7e52e63de?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzZWRhbiUyMGNhcnxlbnwwfHx8fDE3NjA3MzE1OTV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sedan car"
+    },
+    {
+      "id": "camry",
+      "description": "A dark blue Toyota Camry family sedan.",
+      "imageUrl": "https://images.unsplash.com/photo-1636443315279-0f5ba5b195ac?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxmYW1pbHklMjBzZWRhbnxlbnwwfHx8fDE3NjA4MjE3NTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "family sedan"
+    },
+    {
+      "id": "rav4-hybrid",
+      "description": "A white Toyota RAV4 Hybrid SUV.",
+      "imageUrl": "https://images.unsplash.com/photo-1611937187627-a427e75ecf65?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxzdXYlMjBoeWJyaWR8ZW58MHx8fHwxNzYwODIxNzU5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "suv hybrid"
+    },
+    {
+      "id": "sienna",
+      "description": "A gray Toyota Sienna minivan.",
+      "imageUrl": "https://images.unsplash.com/photo-1568302049992-a4bcf1abc2ef?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtaW5pdmFuJTIwY2FyfGVufDB8fHx8MTc2MDc2NDM2NXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "minivan car"
+    },
+    {
+      "id": "tundra",
+      "description": "A red Toyota Tundra truck.",
+      "imageUrl": "https://images.unsplash.com/photo-1627208875748-2f4aed577f2d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx0cnVjayUyMHJlZHxlbnwwfHx8fDE3NjA4MjE3NTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "truck red"
+    },
+    {
+      "id": "hero",
+      "description": "A Toyota vehicle driving on a scenic road.",
+      "imageUrl": "https://images.unsplash.com/photo-1543265832-56c79a5caf97?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8Y2FyJTIwcm9hZHxlbnwwfHx8fDE3NjA3NzEyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "car road"
+    }
+  ]
+}

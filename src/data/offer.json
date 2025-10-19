@@ -1,0 +1,12 @@
+{
+    "id": "offer-123",
+    "dealerId": "dealer-456",
+    "vehicleModelName": "2024 Tesla Model 3",
+    "msrp": 38990,
+    "offerType": "lease",
+    "termMonths": 36,
+    "monthlyPayment": 329,
+    "dueAtSigning": 4500,
+    "status": "published",
+    "lastRevisedDate": "2024-07-22T10:00:00.000Z"
+}

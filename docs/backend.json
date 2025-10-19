@@ -1,0 +1,257 @@
+{
+  "entities": {
+    "Vehicle": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Vehicle",
+      "type": "object",
+      "description": "Represents a vehicle available for financing or leasing.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the vehicle."
+        },
+        "make": {
+          "type": "string",
+          "description": "The manufacturer of the vehicle (e.g., Toyota)."
+        },
+        "model": {
+          "type": "string",
+          "description": "The model name of the vehicle (e.g., Camry)."
+        },
+        "year": {
+          "type": "number",
+          "description": "The model year of the vehicle."
+        },
+        "msrp": {
+          "type": "number",
+          "description": "The Manufacturer's Suggested Retail Price of the vehicle."
+        },
+        "epaCityMpg": {
+          "type": "number",
+          "description": "EPA city miles per gallon."
+        },
+        "epaHighwayMpg": {
+          "type": "number",
+          "description": "EPA highway miles per gallon."
+        },
+        "fuelType": {
+          "type": "string",
+          "description": "Type of fuel the vehicle uses (e.g., gasoline, electric)."
+        },
+        "imageUri": {
+          "type": "string",
+          "description": "URI for the vehicle's image.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "make",
+        "model",
+        "year",
+        "msrp"
+      ]
+    },
+    "Dealer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Dealer",
+      "type": "object",
+      "description": "Represents a dealership offering financial products.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the dealer."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the dealership."
+        },
+        "address": {
+          "type": "string",
+          "description": "The street address of the dealership."
+        },
+        "zipCode": {
+          "type": "string",
+          "description": "The zip code of the dealership."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "The contact email address for the dealership.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "address",
+        "zipCode",
+        "contactEmail"
+      ]
+    },
+    "FinancialOffer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FinancialOffer",
+      "type": "object",
+      "description": "Represents a specific lease or loan offer created by a dealer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the financial offer."
+        },
+        "dealerId": {
+          "type": "string",
+          "description": "Reference to Dealer. (Relationship: Dealer 1:N FinancialOffer)"
+        },
+        "vehicleId": {
+          "type": "string",
+          "description": "Reference to Vehicle. (Relationship: Vehicle 1:N FinancialOffer)"
+        },
+        "vehicleModelName": {
+          "type": "string",
+          "description": "The model name of the vehicle for display purposes."
+        },
+        "offerType": {
+          "type": "string",
+          "description": "Type of offer (e.g., lease, loan)."
+        },
+        "status": {
+            "type": "string",
+            "description": "The status of the offer (e.g., draft, published, accepted).",
+            "enum": ["draft", "published", "accepted", "expired"]
+        },
+        "msrp": {
+          "type": "number",
+          "description": "The MSRP used for the offer calculation."
+        },
+        "incentives": {
+          "type": "number",
+          "description": "Total amount of incentives applied to the offer."
+        },
+        "termMonths": {
+          "type": "number",
+          "description": "The term length of the offer in months."
+        },
+        "mileageAllowance": {
+          "type": "number",
+          "description": "Annual mileage allowance (for leases)."
+        },
+        "residualPercentage": {
+          "type": "number",
+          "description": "The residual percentage of the vehicle's value at the end of the lease term."
+        },
+        "apr": {
+          "type": "number",
+          "description": "The Annual Percentage Rate (APR) for loans."
+        },
+        "moneyFactor": {
+          "type": "number",
+          "description": "The Money Factor for leases."
+        },
+        "fees": {
+          "type": "number",
+          "description": "Total fees associated with the offer."
+        },
+        "taxRate": {
+          "type": "number",
+          "description": "Tax rate applied to the offer (by ZIP code)."
+        },
+        "validUntil": {
+          "type": "string",
+          "description": "The date and time until which the offer is valid.",
+          "format": "date-time"
+        },
+        "offerDetails": {
+          "type": "string",
+          "description": "Detailed description of the offer."
+        },
+        "createdDate": {
+          "type": "string",
+          "description": "The date and time when the offer was created",
+          "format": "date-time"
+        },
+        "lastRevisedDate": {
+          "type": "string",
+          "description": "The date and time when the offer was last revised",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "dealerId",
+        "vehicleId",
+        "offerType",
+        "msrp",
+        "termMonths",
+        "status"
+      ]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile for either a shopper or a dealer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile (matches auth uid)."
+        },
+        "role": {
+            "type": "string",
+            "description": "The role of the user.",
+            "enum": ["shopper", "dealer"]
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The first name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The last name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "zipCode": {
+          "type": "string",
+          "description": "The zip code of the user (for shoppers)."
+        },
+        "creditTier": {
+          "type": "string",
+          "description": "The credit tier of the user (for shoppers)."
+        },
+        "dealerId": {
+            "type": "string",
+            "description": "The ID of the dealership this user belongs to (for dealers)."
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "email",
+        "firstName",
+        "lastName"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password"
+    ]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores user profile information. A user can only access their own profile. The `role` field determines if they are a shopper or dealer."
+    },
+    "/financialOffers/{financialOfferId}": {
+      "schema": {
+        "$ref": "#/entities/FinancialOffer"
+      },
+      "description": "Stores financial offers created by dealers. A dealer can only create, read, update, or delete offers where `dealerId` matches their `auth.uid`."
+    }
+  }
+}

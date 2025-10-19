@@ -1,0 +1,310 @@
+/**
+ * @fileoverview Firestore Security Rules for the Toyota Financial Services application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for private user data and a dealer-ownership model for financial offers.
+ * Public read access is granted to vehicle and F&I add-on catalogs.
+ *
+ * Data Structure:
+ * - /vehicles/{vehicleId}: Public vehicle catalog.
+ * - /dealers/{dealerId}: Public dealer information, editable by the dealer.
+ * - /financialOffers/{financialOfferId}: Financial offers created by dealers, secured by dealerId.
+ * - /users/{userId}: User profiles and associated data (income verification, credit applications, contracts, etc.).
+ * - /users/{userId}/incomeVerifications/{incomeVerificationId}: Income verification documents.
+ * - /users/{userId}/creditApplications/{creditApplicationId}: Credit applications.
+ * - /users/{userId}/tradeIns/{tradeInId}: Trade-in information.
+ * - /users/{userId}/leaseContracts/{leaseContractId}: Lease contracts.
+ * - /users/{userId}/retailContracts/{retailContractId}: Retail (loan) contracts.
+ * - /users/{userId}/payments/{paymentId}: Payment information.
+ * - /users/{userId}/pickupDeliverySchedules/{scheduleId}: Pickup/delivery schedules.
+ * - /users/{userId}/modelMatchQuizResponses/{quizResponseId}: Model match quiz responses.
+ * - /users/{userId}/financialOffers/{financialOfferId}: Financial offers tied to a specific user.
+ * - /financeAndInsuranceAddOns/{addOnId}: Public F&I add-on catalog.
+ * - /negotiationThreads/{negotiationThreadId}: Negotiation threads between dealers and customers.
+ * - /negotiationThreads/{negotiationThreadId}/messages/{messageId}: Messages within negotiation threads.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own data under the /users/{userId} path.
+ * - Dealers can only manage financial offers they created (financialOffers.dealerId == request.auth.uid).
+ * - Public read access is allowed for vehicle and F&I add-on catalogs.
+ * - Listing user documents is allowed only for the owning user.
+ *
+ * Denormalization for Authorization:
+ * - FinancialOffer documents include a `dealerId` field to easily determine ownership,
+ *   avoiding the need for complex lookups to a separate dealer record.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Allows read-only access to vehicle data.
+     * @path /vehicles/{vehicleId}
+     * @allow (get, list): if true
+     * @deny (create, update, delete): if false
+     * @principle Public read access for vehicle catalog.
+     */
+    match /vehicles/{vehicleId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Allows dealers to read and update their own information.
+     * @path /dealers/{dealerId}
+     * @allow (get, list): if true
+     * @allow (create): if request.auth.uid == dealerId;
+     * @allow (update, delete): if isExistingOwner(dealerId);
+     * @deny   (create, update, delete): if false;
+     * @principle Dealers can manage their own profile.
+     */
+    match /dealers/{dealerId} {
+      allow get, list: if true;
+      allow create: if request.auth.uid == dealerId;
+      allow update, delete: if isExistingOwner(dealerId);
+      allow read: if true;
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows dealers to create, update, and delete their own financial offers.
+     * @path /financialOffers/{financialOfferId}
+     * @allow (get, list): if true;
+     * @allow (create): if request.auth.uid != null && request.resource.data.dealerId == request.auth.uid;
+     * @allow (update, delete): if isExistingOwner(resource.data.dealerId);
+     * @deny   (create, update, delete): if false;
+     * @principle Dealers can only manage offers they created.
+     */
+    match /financialOffers/{financialOfferId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.dealerId == request.auth.uid;
+      allow update, delete: if isExistingOwner(resource.data.dealerId);
+      allow read: if true;
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows users to manage their income verification data.
+     * @path /users/{userId}/incomeVerifications/{incomeVerificationId}
+     * @allow (get, list, create, update, delete): if isOwner(userId);
+     * @deny (create, update, delete): if false;
+     * @principle Users can only access their own income verification records.
+     */
+    match /users/{userId}/incomeVerifications/{incomeVerificationId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows users to manage their credit application data.
+     * @path /users/{userId}/creditApplications/{creditApplicationId}
+     *  @allow (get, list, create, update, delete): if isOwner(userId);
+     * @deny (create, update, delete): if false;
+     * @principle Users can only access their own credit application records.
+     */
+    match /users/{userId}/creditApplications/{creditApplicationId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows users to manage their trade-in vehicle information.
+     * @path /users/{userId}/tradeIns/{tradeInId}
+     *  @allow (get, list, create, update, delete): if isOwner(userId);
+     * @deny (create, update, delete): if false;
+     * @principle Users can only access their own trade-in records.
+     */
+    match /users/{userId}/tradeIns/{tradeInId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows read-only access to F&I add-on products.
+     * @path /financeAndInsuranceAddOns/{addOnId}
+     * @allow (get, list): if true
+     * @deny (create, update, delete): if false
+     * @principle Public read access for F&I add-on catalog.
+     */
+    match /financeAndInsuranceAddOns/{addOnId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Allows users to manage their lease contracts.
+     * @path /users/{userId}/leaseContracts/{leaseContractId}
+     *  @allow (get, list, create, update, delete): if isOwner(userId);
+     * @deny (create, update, delete): if false;
+     * @principle Users can only access their own lease contracts.
+     */
+    match /users/{userId}/leaseContracts/{leaseContractId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows users to manage their retail (loan) contracts.
+     * @path /users/{userId}/retailContracts/{retailContractId}
+     *  @allow (get, list, create, update, delete): if isOwner(userId);
+     * @deny (create, update, delete): if false;
+     * @principle Users can only access their own retail contracts.
+     */
+    match /users/{userId}/retailContracts/{retailContractId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows users to manage their payment information.
+     * @path /users/{userId}/payments/{paymentId}
+     *  @allow (get, list, create, update, delete): if isOwner(userId);
+     * @deny (create, update, delete): if false;
+     * @principle Users can only access their own payment records.
+     */
+    match /users/{userId}/payments/{paymentId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows users to manage their pickup/delivery schedules.
+     * @path /users/{userId}/pickupDeliverySchedules/{scheduleId}
+     *  @allow (get, list, create, update, delete): if isOwner(userId);
+     * @deny (create, update, delete): if false;
+     * @principle Users can only access their own pickup/delivery schedules.
+     */
+    match /users/{userId}/pickupDeliverySchedules/{scheduleId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows access to negotiation threads based on the associated FinancialOffer and its dealerId.
+     * @path /negotiationThreads/{negotiationThreadId}
+     * @allow get: if get(/databases/$(database)/documents/financialOffers/$(resource.data.financialOfferId)).data.dealerId == request.auth.uid;
+     * @allow list: if true; // TODO: secure list based on ownership
+     * @allow create: if isSignedIn() && request.resource.data.financialOfferId != null; // Check if user is signed in and financialOfferId exists
+     * @allow update: if false; //TODO: implement a update rule once the roles are figured out (dealer / customer)
+     * @allow delete: if false;
+     * @principle Access control based on FinancialOffer ownership.
+     */
+    match /negotiationThreads/{negotiationThreadId} {
+       allow get: if get(/databases/$(database)/documents/financialOffers/$(resource.data.financialOfferId)).data.dealerId == request.auth.uid;
+        allow list: if true;
+        allow create: if isSignedIn() && request.resource.data.financialOfferId != null;
+        allow update: if false;
+        allow delete: if false;
+    }
+
+    /**
+     * @description Allows access to messages within a negotiation thread based on the parent thread's access.
+     * @path /negotiationThreads/{negotiationThreadId}/messages/{messageId}
+     * @allow get: if get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId != null && get(/databases/$(database)/documents/financialOffers/$(get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId)).data.dealerId == request.auth.uid;
+     * @allow list: if true; // TODO: secure list based on ownership
+     * @allow create: if isSignedIn() && request.resource.data.negotiationThreadId == negotiationThreadId;
+     * @allow update: if false;
+     * @allow delete: if false;
+     * @principle Access control mirrors the parent thread.
+     */
+    match /negotiationThreads/{negotiationThreadId}/messages/{messageId} {
+        allow get: if get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId != null && get(/databases/$(database)/documents/financialOffers/$(get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId)).data.dealerId == request.auth.uid;
+        allow list: if true;
+        allow create: if isSignedIn() && request.resource.data.negotiationThreadId == negotiationThreadId;
+        allow update: if false;
+        allow delete: if false;
+    }
+
+    /**
+     * @description Allows users to manage their model match quiz responses.
+     * @path /users/{userId}/modelMatchQuizResponses/{quizResponseId}
+     *  @allow (get, list, create, update, delete): if isOwner(userId);
+     * @deny (create, update, delete): if false;
+     * @principle Users can only access their own quiz responses.
+     */
+    match /users/{userId}/modelMatchQuizResponses/{quizResponseId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows users to read and update their own profile information.
+     * @path /users/{userId}
+     * @allow get, list: if isOwner(userId);
+     * @allow create: if request.auth.uid == userId;
+     * @allow update: if isExistingOwner(userId);
+     * @allow delete: if isExistingOwner(userId);
+     * @deny   (create, update, delete): if false;
+     * @principle Users can manage their own profile.
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if request.auth.uid == userId;
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow read: if isOwner(userId);
+      allow write: if false;
+    }
+
+    /**
+     * @description Allows financial offers to be stored under a specific user.
+     * @path /users/{userId}/financialOffers/{financialOfferId}
+     * @allow get, list: if isOwner(userId);
+     * @allow create: if isOwner(userId);
+     * @allow update: if isExistingOwner(userId);
+     * @allow delete: if isExistingOwner(userId);
+     * @principle Only the user can access their own financial offers.
+     */
+    match /users/{userId}/financialOffers/{financialOfferId} {
+       allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return isSignedIn() && isOwner(userId) && resource != null;
+    }
+  }
+}
