@@ -66,7 +66,7 @@ export function OnboardingModal() {
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-headline">
-            Welcome to the Finance Navigator
+            Welcome to the Toyota Finance Navigator
           </DialogTitle>
           <DialogDescription>
             Answer a few questions to get a personalized financial plan.

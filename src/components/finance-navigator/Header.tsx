@@ -82,7 +82,7 @@ export function Header() {
             </Link>
             <div className="w-px h-6 bg-border" />
             <h1 className="text-xl font-bold tracking-tight font-headline">
-              Finance Navigator
+              Toyota Finance Navigator
             </h1>
           </div>
           <div className="flex items-center gap-2">

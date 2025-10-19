@@ -106,13 +106,6 @@ export async function suggestModelsFromQuiz(
       "features": ["Efficiency"]
     },
     {
-      "model": "Venza",
-      "category": "SUV",
-      "seating_capacity": 5,
-      "available_powertrains": ["Hybrid"],
-      "features": ["Efficiency", "Comfort"]
-    },
-    {
       "model": "Highlander",
       "category": "SUV",
       "seating_capacity": 8,
@@ -178,28 +171,27 @@ export async function suggestModelsFromQuiz(
   ];
 
   const vehicleUrls: Record<string, string> = {
-    Corolla: 'https://placeholder.toyota.com/corolla',
-    'Corolla Hatchback': 'https://placeholder.toyota.com/corolla-hatchback',
-    Camry: 'https://placeholder.toyota.com/camry',
-    Crown: 'https://placeholder.toyota.com/crown',
-    Mirai: 'https://placeholder.toyota.com/mirai',
-    Prius: 'https://placeholder.toyota.com/prius',
-    'Prius Prime': 'https://placeholder.toyota.com/prius-prime',
-    GR86: 'https://placeholder.toyota.com/gr86',
-    'GR Supra': 'https://placeholder.toyota.com/gr-supra',
-    'GR Corolla': 'https://placeholder.toyota.com/gr-corolla',
-    'Corolla Cross': 'https://placeholder.toyota.com/corolla-cross',
-    RAV4: 'https://placeholder.toyota.com/rav4',
-    Venza: 'https://placeholder.toyota.com/venza',
-    Highlander: 'https://placeholder.toyota.com/highlander',
-    'Grand Highlander': 'https://placeholder.toyota.com/grand-highlander',
-    '4Runner': 'https://placeholder.toyota.com/4runner',
-    Sequoia: 'https://placeholder.toyota.com/sequoia',
-    'Land Cruiser': 'https://placeholder.toyota.com/land-cruiser',
-    bZ4X: 'https://placeholder.toyota.com/bz4x',
-    Tacoma: 'https://placeholder.toyota.com/tacoma',
-    Tundra: 'https://placeholder.toyota.com/tundra',
-    Sienna: 'https://placeholder.toyota.com/sienna',
+    "4Runner": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/4runner/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "BZ4X": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2026/bz/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Camry": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/camry/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Corolla Cross": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/corollacross/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Corolla": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/corolla/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Corolla Hatchback": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/corollahatchback/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "GR Corolla": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/grcorolla/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "GR Supra": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/grsupra/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "GR86": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/gr86/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Grand Highlander": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/grandhighlander/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Highlander": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/highlander/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Land Cruiser": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/landcruiser/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Mirai": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/mirai/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Prius": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/prius/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Prius Prime": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/priuspluginhybrid/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "RAV4": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/rav4/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Sequoia": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/sequoia/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Sienna": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/sienna/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Tacoma": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/tacoma/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Crown": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/toyotacrown/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "Tundra": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/tundra/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
   };
 
   const availableVehicles = baseAvailableVehicles.map((vehicle) => ({
