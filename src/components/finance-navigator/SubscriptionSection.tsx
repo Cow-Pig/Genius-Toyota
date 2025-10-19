@@ -45,6 +45,10 @@ export function SubscriptionSection() {
         // clear out invalid data
         setEmail('');
         setName('');
+        toast({
+          title: 'Subscription confirmed',
+          description: 'We will keep you updated with the latest Toyota Finance Navigator news.',
+        });
       } else {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? 'Failed to subscribe');
