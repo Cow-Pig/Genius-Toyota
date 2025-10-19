@@ -29,7 +29,7 @@ export function QuizResults({ results, onSelectVehicle, onRestart }: QuizResults
           <Card key={model.modelName} className="flex flex-col overflow-hidden hover:shadow-2xl transition-shadow duration-300 group">
             <CardHeader className="p-0">
                 <div className='bg-primary/10 p-4'>
-                    <p className="text-primary font-semibold text-center">"{model.rationale}"</p>
+                    <p className="text-primary font-semibold text-center">{model.rationale}</p>
                 </div>
               <div className="relative h-48 w-full">
                 <Image

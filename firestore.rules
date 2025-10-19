@@ -81,6 +81,12 @@ service cloud.firestore {
       allow update, delete: if isExistingOwner(resource.data.dealerId);
       allow read: if true;
       allow write: if false;
+
+      match /history/{historyId} {
+        allow get, list: if isDealerForFinancialOffer(financialOfferId);
+        allow create: if isDealerForFinancialOffer(financialOfferId);
+        allow update, delete: if false;
+      }
     }
 
     /**
@@ -218,11 +224,53 @@ service cloud.firestore {
      * @principle Access control based on FinancialOffer ownership.
      */
     match /negotiationThreads/{negotiationThreadId} {
-       allow get: if get(/databases/$(database)/documents/financialOffers/$(resource.data.financialOfferId)).data.dealerId == request.auth.uid;
-        allow list: if true;
-        allow create: if isSignedIn() && request.resource.data.financialOfferId != null;
-        allow update: if false;
-        allow delete: if false;
+      allow get: if resource != null && canAccessFinancialOffer(resource.data.financialOfferId);
+      allow list: if false;
+      allow create: if
+        canAccessFinancialOffer(request.resource.data.financialOfferId) &&
+        request.resource.data.keys().hasOnly([
+          'financialOfferId',
+          'dealerId',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'lastMessagePreview',
+          'customerId',
+        ]) &&
+        request.resource.data.financialOfferId == negotiationThreadId &&
+        matchesOfferDealer(request.resource.data.financialOfferId, request.resource.data.dealerId) &&
+        request.resource.data.status in ['open', 'accepted', 'closed'];
+      allow update: if
+        resource != null &&
+        canAccessFinancialOffer(resource.data.financialOfferId) &&
+        matchesOfferDealer(resource.data.financialOfferId, resource.data.dealerId) &&
+        request.resource.data.keys().hasOnly([
+          'financialOfferId',
+          'dealerId',
+          'status',
+          'createdAt',
+          'updatedAt',
+          'lastMessagePreview',
+          'customerId',
+        ]) &&
+        (
+          !request.resource.data.keys().hasAny(['financialOfferId']) ||
+          request.resource.data.financialOfferId == resource.data.financialOfferId
+        ) &&
+        (
+          !request.resource.data.keys().hasAny(['dealerId']) ||
+          request.resource.data.dealerId == resource.data.dealerId
+        ) &&
+        (
+          !request.resource.data.keys().hasAny(['status']) ||
+          request.resource.data.status in ['open', 'accepted', 'closed']
+        ) &&
+        (
+          !request.resource.data.keys().hasAny(['customerId']) ||
+          resource.data.customerId == null ||
+          request.resource.data.customerId == resource.data.customerId
+        );
+      allow delete: if false;
     }
 
     /**
@@ -236,11 +284,47 @@ service cloud.firestore {
      * @principle Access control mirrors the parent thread.
      */
     match /negotiationThreads/{negotiationThreadId}/messages/{messageId} {
-        allow get: if get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId != null && get(/databases/$(database)/documents/financialOffers/$(get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId)).data.dealerId == request.auth.uid;
-        allow list: if true;
-        allow create: if isSignedIn() && request.resource.data.negotiationThreadId == negotiationThreadId;
-        allow update: if false;
-        allow delete: if false;
+      allow get: if canAccessNegotiationThread(negotiationThreadId);
+      allow list: if canAccessNegotiationThread(negotiationThreadId);
+      allow create: if
+        canAccessNegotiationThread(negotiationThreadId) &&
+        request.resource.data.keys().hasOnly([
+          'negotiationThreadId',
+          'authorId',
+          'authorRole',
+          'content',
+          'reasonCode',
+          'counterProposal',
+          'createdAt',
+        ]) &&
+        request.resource.data.negotiationThreadId == negotiationThreadId &&
+        request.resource.data.authorRole in ['dealer', 'customer'] &&
+        request.resource.data.content is string &&
+        request.resource.data.content.size() > 0 &&
+        isValidMessageAuthor(negotiationThreadId) &&
+        (
+          !request.resource.data.keys().hasAny(['reasonCode']) ||
+          request.resource.data.reasonCode in [
+            'TERM_EXTENSION',
+            'MILEAGE_ADJUSTMENT',
+            'DOWN_PAYMENT_ADJUSTMENT',
+            'CUSTOM',
+          ]
+        ) &&
+        (
+          !request.resource.data.keys().hasAny(['counterProposal']) ||
+          (
+            request.resource.data.counterProposal is map &&
+            request.resource.data.counterProposal.keys().hasOnly([
+              'termMonths',
+              'mileageAllowance',
+              'downPayment',
+              'estimatedPayment',
+            ])
+          )
+        );
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
@@ -305,6 +389,68 @@ service cloud.firestore {
 
     function isExistingOwner(userId) {
       return isSignedIn() && isOwner(userId) && resource != null;
+    }
+
+    function getFinancialOfferDocument(financialOfferId) {
+      return get(/databases/$(database)/documents/financialOffers/$(financialOfferId));
+    }
+
+    function isPublishedFinancialOffer(financialOfferId) {
+      return financialOfferId != null && getFinancialOfferDocument(financialOfferId).data.status == 'published';
+    }
+
+    function isDealerForFinancialOffer(financialOfferId) {
+      return
+        request.auth != null &&
+        financialOfferId != null &&
+        getFinancialOfferDocument(financialOfferId).data.dealerId == request.auth.uid;
+    }
+
+    function matchesOfferDealer(financialOfferId, dealerId) {
+      return
+        financialOfferId != null &&
+        dealerId != null &&
+        getFinancialOfferDocument(financialOfferId).data.dealerId == dealerId;
+    }
+
+    function canAccessFinancialOffer(financialOfferId) {
+      return financialOfferId != null && (
+        isPublishedFinancialOffer(financialOfferId) ||
+        isDealerForFinancialOffer(financialOfferId)
+      );
+    }
+
+    function negotiationThreadExists(negotiationThreadId) {
+      return exists(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId));
+    }
+
+    function negotiationThreadOfferId(negotiationThreadId) {
+      return negotiationThreadExists(negotiationThreadId)
+        ? get(/databases/$(database)/documents/negotiationThreads/$(negotiationThreadId)).data.financialOfferId
+        : negotiationThreadId;
+    }
+
+    function canAccessNegotiationThread(negotiationThreadId) {
+      return canAccessFinancialOffer(negotiationThreadOfferId(negotiationThreadId));
+    }
+
+    function dealerOwnsNegotiationThread(negotiationThreadId, dealerId) {
+      return matchesOfferDealer(negotiationThreadOfferId(negotiationThreadId), dealerId);
+    }
+
+    function isValidMessageAuthor(negotiationThreadId) {
+      return (
+        request.resource.data.authorRole == 'customer' &&
+        (
+          request.auth == null ||
+          !dealerOwnsNegotiationThread(negotiationThreadId, request.auth.uid)
+        )
+      ) || (
+        request.resource.data.authorRole == 'dealer' &&
+        request.auth != null &&
+        request.resource.data.authorId == request.auth.uid &&
+        dealerOwnsNegotiationThread(negotiationThreadId, request.auth.uid)
+      );
     }
   }
 }
