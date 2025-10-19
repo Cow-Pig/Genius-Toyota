@@ -1,5 +1,5 @@
 'use client';
-import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import type { Scenario, Vehicle, SavedScenario, DrawerState } from '@/types';
 import { calculateLeasePayment, calculateLoanPayment } from '@/lib/calculations';
 import { getRatesForTier } from '@/lib/data';
@@ -123,9 +123,9 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
 
   const persistState = useCallback((newState: PersistedState) => {
     try {
-        localStorage.setItem('financeNavigatorScenario', JSON.stringify(newState));
+      localStorage.setItem('financeNavigatorScenario', JSON.stringify(newState));
     } catch (error) {
-        console.error("Failed to save to localStorage", error);
+      console.error('Failed to save to localStorage', error);
     }
   }, []);
 
@@ -136,24 +136,28 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     500,
   );
 
-  const updateScenario = (updates: Partial<Scenario>) => {
-    setScenario((prev: Scenario) => {
+  const updateScenario = useCallback(
+    (updates: Partial<Scenario>) => {
+      setScenario((prev: Scenario) => {
         const newScenario = { ...prev, ...updates };
-        // Debounce the localStorage persistence
         debouncedPersist(newScenario, savedScenarios);
         return newScenario;
-    });
-  };
+      });
+    },
+    [debouncedPersist, savedScenarios],
+  );
 
-  const setOnboardingOpen = (open: boolean) => {
-    setIsOnboarded(!open);
-    if (!open) {
-        // If closing the modal, we assume they've completed it, so persist immediately.
+  const setOnboardingOpen = useCallback(
+    (open: boolean) => {
+      setIsOnboarded(!open);
+      if (!open) {
         persistState({ scenario, savedScenarios });
-    }
-  };
+      }
+    },
+    [persistState, scenario, savedScenarios],
+  );
 
-  const saveScenarioOption = (option: 'finance' | 'lease'): SavedScenario | null => {
+  const saveScenarioOption = useCallback((option: 'finance' | 'lease'): SavedScenario | null => {
     if (!activeVehicle) return null;
 
     const rates = getRatesForTier(scenario.creditScoreTier);
@@ -206,34 +210,42 @@ export function ScenarioProvider({ children }: { children: ReactNode }) {
     };
 
     setSavedScenarios((prev: SavedScenario[]) => {
-        const filtered = prev.filter(
-          (item) => !(item.planType === option && item.vehicle.id === activeVehicle.id),
-        );
-        const updated = [...filtered, savedScenario].slice(-6);
-        persistState({ scenario, savedScenarios: updated });
-        return updated;
+      const filtered = prev.filter(
+        (item) => !(item.planType === option && item.vehicle.id === activeVehicle.id),
+      );
+      const updated = [...filtered, savedScenario].slice(-6);
+      persistState({ scenario, savedScenarios: updated });
+      return updated;
     });
 
     return savedScenario;
-  };
+  }, [activeVehicle, persistState, scenario]);
 
-
-  return (
-    <ScenarioContext.Provider
-      value={{
-        scenario,
-        updateScenario,
-        isOnboarded,
-        setOnboardingOpen,
-        activeVehicle,
-        setActiveVehicle,
-        savedScenarios,
-        saveScenarioOption,
-        drawerState,
-        setDrawerState
-      }}
-    >
-      {children}
-    </ScenarioContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      scenario,
+      updateScenario,
+      isOnboarded,
+      setOnboardingOpen,
+      activeVehicle,
+      setActiveVehicle,
+      savedScenarios,
+      saveScenarioOption,
+      drawerState,
+      setDrawerState,
+    }),
+    [
+      scenario,
+      updateScenario,
+      isOnboarded,
+      setOnboardingOpen,
+      activeVehicle,
+      savedScenarios,
+      saveScenarioOption,
+      drawerState,
+      setDrawerState,
+    ],
   );
+
+  return <ScenarioContext.Provider value={contextValue}>{children}</ScenarioContext.Provider>;
 }

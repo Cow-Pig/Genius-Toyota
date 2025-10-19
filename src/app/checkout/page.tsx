@@ -13,8 +13,19 @@ import { CreditApplicationFlow } from '@/components/checkout/CreditApplicationFl
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useTransition } from 'react';
 
 export default function CheckoutPage() {
+  const router = useRouter();
+  const [isNavigating, startNavigate] = useTransition();
+
+  const handleCompletePurchase = () => {
+    startNavigate(() => {
+      router.push('/checkout/success');
+    });
+  };
+
   return (
     <div className="container mx-auto max-w-4xl px-4 py-12 sm:px-6">
       <div className="mb-8">
@@ -43,8 +54,8 @@ export default function CheckoutPage() {
         
         <SchedulingForm />
 
-        <Button className="w-full" size="lg">
-          Complete Purchase
+        <Button className="w-full" size="lg" onClick={handleCompletePurchase} disabled={isNavigating}>
+          {isNavigating ? 'Finalizing your purchase…' : 'Complete Purchase'}
         </Button>
       </div>
     </div>

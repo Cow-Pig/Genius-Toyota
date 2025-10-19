@@ -14,14 +14,14 @@ import { getRatesForTier } from '@/lib/data';
 import { ArrowRight, CheckCircle, TrendingUp } from 'lucide-react';
 import AnimatedNumber from './AnimatedNumber';
 import { formatCurrency } from '@/lib/utils';
-import { useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-export function ComparisonView() {
+export const ComparisonView = memo(function ComparisonView() {
   const { scenario, activeVehicle, setDrawerState, saveScenarioOption } = useScenario();
   const { toast } = useToast();
 
-  const rates = getRatesForTier(scenario.creditScoreTier);
+  const rates = useMemo(() => getRatesForTier(scenario.creditScoreTier), [scenario.creditScoreTier]);
 
   const { financePayment, leasePayment, financeTotal, leaseTotal, dueAtSigning } = useMemo(() => {
     if (!activeVehicle) return { financePayment: 0, leasePayment: 0, financeTotal: 0, leaseTotal: 0, dueAtSigning: 0 };
@@ -61,21 +61,24 @@ export function ComparisonView() {
     );
   }
 
-  const handleSaveScenario = (option: 'finance' | 'lease') => {
-    const saved = saveScenarioOption(option);
-    if (saved) {
-      toast({
-        title: `${option === 'finance' ? 'Finance' : 'Lease'} scenario saved`,
-        description: `${saved.vehicle.modelName} • ${formatCurrency(saved.monthlyPayment)}/mo for ${saved.termMonths} months`,
-      });
-    } else {
-      toast({
-        title: 'Select a vehicle to save',
-        description: 'Choose a vehicle to capture its payment scenario before saving.',
-        variant: 'destructive',
-      });
-    }
-  };
+  const handleSaveScenario = useCallback(
+    (option: 'finance' | 'lease') => {
+      const saved = saveScenarioOption(option);
+      if (saved) {
+        toast({
+          title: `${option === 'finance' ? 'Finance' : 'Lease'} scenario saved`,
+          description: `${saved.vehicle.modelName} • ${formatCurrency(saved.monthlyPayment)}/mo for ${saved.termMonths} months`,
+        });
+      } else {
+        toast({
+          title: 'Select a vehicle to save',
+          description: 'Choose a vehicle to capture its payment scenario before saving.',
+          variant: 'destructive',
+        });
+      }
+    },
+    [saveScenarioOption, toast],
+  );
 
   return (
     <Card className="shadow-lg">
@@ -138,4 +141,6 @@ export function ComparisonView() {
       </CardContent>
     </Card>
   );
-}
+});
+
+ComparisonView.displayName = 'ComparisonView';
