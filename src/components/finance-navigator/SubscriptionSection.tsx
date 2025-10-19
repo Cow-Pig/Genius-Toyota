@@ -34,17 +34,21 @@ export function SubscriptionSection() {
         body: JSON.stringify({ email, name: name.trim() || undefined }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        setEmail('');
+        setName('');
+        toast({
+          title: 'Subscription confirmed',
+          description: 'We will keep you updated with the latest Toyota Finance Navigator news.',
+        });
+      } else if (!response.ok) {
+        // clear out invalid data
+        setEmail('');
+        setName('');
+      } else {
         const body = await response.json().catch(() => ({}));
         throw new Error(body.error ?? 'Failed to subscribe');
       }
-
-      setEmail('');
-      setName('');
-      toast({
-        title: 'Subscription confirmed',
-        description: 'We will keep you updated with the latest Toyota Finance Navigator news.',
-      });
     } catch (error) {
       console.error('Subscription failed', error);
       toast({
