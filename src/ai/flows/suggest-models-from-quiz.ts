@@ -172,7 +172,7 @@ export async function suggestModelsFromQuiz(
 
   const vehicleUrls: Record<string, string> = {
     "4Runner": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/4runner/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
-    "BZ4X": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2026/bz/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
+    "bZ4X": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2026/bz/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
     "Camry": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/camry/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
     "Corolla Cross": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/corollacross/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
     "Corolla": "https://tmna.aemassets.toyota.com/is/image/toyota/toyota/jellies/relative/2025/corolla/base.png?bg=fff&fmt=webp&qlt=90&wid=2000",
@@ -218,7 +218,7 @@ const suggestModelsFromQuizPrompt = ai.definePrompt({
   - Fuel preference: {{{fuelPreference}}}
   - What is most important in a vehicle: {{{priorities}}}
 
-  Based on these answers, recommend 3 to 5 vehicles from the list above. For each vehicle, provide a short, compelling "rationale" (e.g., "Best for long commutes with its hybrid efficiency"). Also provide key specs (from the 'features' array in the data), an estimated monthly payment (calculate roughly based on a 60-month loan at 5% APR with $5000 down), and relevant badges. Ensure the photoUrl is a placeholder.
+  Based on these answers, recommend 3 to 5 vehicles from the list above. For each vehicle, provide a short, compelling "rationale" (e.g., "Best for long commutes with its hybrid efficiency"). Also provide key specs (from the 'features' array in the data), an estimated monthly payment (calculate roughly based on a 60-month loan at 5% APR with $5000 down), and relevant badges.
 
   Return the recommendations in the specified JSON format.
   `,

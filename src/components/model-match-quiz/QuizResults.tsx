@@ -33,7 +33,7 @@ export function QuizResults({ results, onSelectVehicle, onRestart }: QuizResults
                 </div>
               <div className="relative h-48 w-full">
                 <Image
-                  src={`https://picsum.photos/seed/${model.modelName.replace(/\s/g, '')}/600/400`}
+                  src={model.photoUrl}
                   alt={model.modelName}
                   fill
                   className="object-cover"
