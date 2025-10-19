@@ -90,6 +90,18 @@ service cloud.firestore {
     }
 
     /**
+     * @description Allows authenticated users to store and retrieve offer purchase records.
+     * @path /offerPurchases/{purchaseId}
+     * @allow (get, list, create, update, delete): if isSignedIn();
+     * @principle Purchases recorded during checkout must be available to authorized application users.
+     */
+    match /offerPurchases/{purchaseId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn();
+    }
+
+    /**
      * @description Allows users to manage their income verification data.
      * @path /users/{userId}/incomeVerifications/{incomeVerificationId}
      * @allow (get, list, create, update, delete): if isOwner(userId);
